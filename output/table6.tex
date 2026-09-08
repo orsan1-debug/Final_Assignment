@@ -1,0 +1,29 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{12}{c}}
+\toprule
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}&\multicolumn{1}{c}{(6)}&\multicolumn{1}{c}{(7)}&\multicolumn{1}{c}{(8)}&\multicolumn{1}{c}{(9)}&\multicolumn{1}{c}{(10)}&\multicolumn{1}{c}{(11)}&\multicolumn{1}{c}{(12)}\\
+            &\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}\\
+\midrule
+Class size  &      -0.687\sym{**} &      -0.588\sym{*}  &      -0.451         &      -0.596\sym{*}  &      -0.395         &      -0.270         &      -0.175         &      -0.234         &      -0.380         &       0.018         &      -0.118         &      -0.247         \\
+            &     (0.264)         &     (0.256)         &     (0.320)         &     (0.291)         &     (0.259)         &     (0.312)         &     (0.137)         &     (0.171)         &     (0.237)         &     (0.151)         &     (0.194)         &     (0.254)         \\
+\addlinespace
+Percent disadvantaged&      -0.464\sym{***}&      -0.452\sym{***}&                     &      -0.433\sym{***}&      -0.416\sym{***}&                     &      -0.350\sym{***}&      -0.372\sym{***}&                     &      -0.291\sym{***}&      -0.323\sym{***}&                     \\
+            &     (0.048)         &     (0.057)         &                     &     (0.052)         &     (0.056)         &                     &     (0.037)         &     (0.044)         &                     &     (0.042)         &     (0.052)         &                     \\
+\addlinespace
+Segment 1 (enrollment 36-45)&      -5.093         &      -4.544         &     -10.670\sym{*}  &      -7.539\sym{*}  &      -6.939\sym{*}  &     -12.599\sym{**} &      -1.620         &      -2.673         &      -6.939\sym{*}  &      -1.894         &      -3.571         &      -7.306\sym{*}  \\
+            &     (3.159)         &     (3.157)         &     (4.263)         &     (3.437)         &     (3.205)         &     (4.148)         &     (1.834)         &     (2.424)         &     (3.280)         &     (1.904)         &     (2.509)         &     (3.380)         \\
+\addlinespace
+Segment 2 (enrollment 76-85)&      -1.639         &      -2.178         &      -2.959         &      -1.567         &      -2.170         &      -2.894         &      -1.517         &      -2.160         &      -3.833         &      -1.153         &      -2.495         &      -3.960         \\
+            &     (1.452)         &     (1.584)         &     (1.900)         &     (1.833)         &     (2.048)         &     (2.304)         &     (1.252)         &     (1.608)         &     (2.030)         &     (1.504)         &     (1.923)         &     (2.259)         \\
+\midrule
+Root MSE    &        7.42         &        7.18         &        8.61         &        9.36         &        9.06         &       10.08         &        6.68         &        6.63         &        8.24         &        8.20         &        8.45         &        9.45         \\
+N           &         471         &         302         &         302         &         471         &         302         &         302         &         415         &         265         &         265         &         415         &         265         &         265         \\
+\bottomrule
+\multicolumn{13}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{13}{l}{\footnotesize Columns 1-6 grade 5, 7-12 grade 4. Within each block: +/-5 sample with PD, +/-3 sample with PD, +/-3 sample without PD.}\\
+\multicolumn{13}{l}{\footnotesize 2SLS, instruments z1 z2 z3 = 1[fsc below 32] interacted with the enrollment segments; segment 3 is the omitted segment.}\\
+\multicolumn{13}{l}{\footnotesize Standard errors clustered by school.}\\
+\multicolumn{13}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}

@@ -1,0 +1,100 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/4_figure2.log
+  log type:  text
+ opened on:   8 Sep 2026, 01:15:27
+
+. use "$root/output/al_clean.dta", clear
+
+. 
+. /*=========================================================================*/
+. *---one panel per grade---*
+. /*=========================================================================*/
+. foreach g in 5 4 {
+  2.     preserve
+  3.     * the paper plots enrollment 5 to 165, i.e. the intervals up to [160,169];
+.     * larger schools (58 classes in grade 5, 48 in grade 4) are left out as in the paper
+.     keep if grade == `g' & c_size <= 169
+  4. 
+.     * "enrollment intervals of ten" (p. 543), plotted at the midpoint 5, 15, ..., 165
+.     gen e_bin = 10 * floor(c_size / 10) + 5
+  5. 
+.     collapse (mean) avgverb fsc (count) n=avgverb, by(e_bin)
+  6.     list e_bin n avgverb fsc                    // log check: the first interval holds only 3-4 classes,
+  7.                                                 // kept so the x-axis matches the paper's (5 to 165)
+.     twoway (connected avgverb e_bin) ///
+>            (connected fsc e_bin, yaxis(2) lpattern(dash)), ///
+>         legend(label(1 "Average reading score") label(2 "Predicted class size (right axis)")) ///
+>         title("Grade `g'") xtitle("Enrollment count") ///
+>         ytitle("Average reading score") ytitle("Predicted class size", axis(2)) ///
+>         xlabel(5(20)165)
+  8.     graph export "$root/output/figure2_grade`g'.png", replace
+  9.     restore
+ 10. }
+(2,102 observations deleted)
+
+     +-----------------------------------+
+     | e_bin     n    avgverb        fsc |
+     |-----------------------------------|
+  1. |     5     4      63.38       8.75 |
+  2. |    15    59   75.05814   15.44068 |
+  3. |    25   127   72.43732   24.05512 |
+  4. |    35    96   70.79319   34.60417 |
+  5. |    45   218   72.95279   23.19037 |
+     |-----------------------------------|
+  6. |    55   233   72.70788   27.22747 |
+  7. |    65   208   74.31556   32.16587 |
+  8. |    75   204   74.49073   37.16422 |
+  9. |    85   181   75.36967   30.33149 |
+ 10. |    95   174   74.89151   31.72989 |
+     |-----------------------------------|
+ 11. |   105   118    74.5441   34.75424 |
+ 12. |   115   125   75.93645   38.35467 |
+ 13. |   125    80   75.98634   33.54063 |
+ 14. |   135    51   79.42306    33.4951 |
+ 15. |   145    32   75.61197   35.90625 |
+     |-----------------------------------|
+ 16. |   155    43   79.46115   38.56977 |
+ 17. |   165    13   78.16241   37.38462 |
+     +-----------------------------------+
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade5.png not found)
+file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade5.png saved as PNG format
+(2,059 observations deleted)
+
+     +-----------------------------------+
+     | e_bin     n    avgverb        fsc |
+     |-----------------------------------|
+  1. |     5     3   77.91666   8.333333 |
+  2. |    15    61   73.37656   15.98361 |
+  3. |    25   128   69.89414   23.99219 |
+  4. |    35    92   69.67498   33.90217 |
+  5. |    45   200   70.91507    23.4825 |
+     |-----------------------------------|
+  6. |    55   208   71.99925   27.20433 |
+  7. |    65   226   72.38199   32.28761 |
+  8. |    75   220   72.05857   37.05682 |
+  9. |    85   169   72.85493   30.01381 |
+ 10. |    95   206   73.81379   31.53074 |
+     |-----------------------------------|
+ 11. |   105   143    73.0626   34.85081 |
+ 12. |   115   135   73.27699   38.47901 |
+ 13. |   125    72   74.03027   32.41319 |
+ 14. |   135    72   75.25116   33.55208 |
+ 15. |   145    22   71.30638   36.47727 |
+     |-----------------------------------|
+ 16. |   155    40   74.95831     38.675 |
+ 17. |   165    12   69.38292   35.73333 |
+     +-----------------------------------+
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade4.png not found)
+file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade4.png saved as PNG format
+
+. 
+. /*=========================================================================*/
+. *closing up
+. /*=========================================================================*/
+. log close
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/4_figure2.log
+  log type:  text
+ closed on:   8 Sep 2026, 01:15:28
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

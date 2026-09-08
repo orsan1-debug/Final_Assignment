@@ -1,0 +1,31 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{12}{c}}
+\toprule
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}&\multicolumn{1}{c}{(6)}&\multicolumn{1}{c}{(7)}&\multicolumn{1}{c}{(8)}&\multicolumn{1}{c}{(9)}&\multicolumn{1}{c}{(10)}&\multicolumn{1}{c}{(11)}&\multicolumn{1}{c}{(12)}\\
+            &\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}\\
+\midrule
+Class size  &      -0.110\sym{**} &      -0.133\sym{*}  &      -0.074         &      -0.147         &      -0.098         &      -0.150         &       0.049         &      -0.050         &      -0.033         &      -0.098         &       0.095         &       0.023         \\
+            &     (0.040)         &     (0.061)         &     (0.068)         &     (0.089)         &     (0.095)         &     (0.131)         &     (0.052)         &     (0.075)         &     (0.084)         &     (0.099)         &     (0.126)         &     (0.158)         \\
+\addlinespace
+Percent disadvantaged&      -0.346\sym{***}&      -0.345\sym{***}&      -0.346\sym{***}&                     &      -0.354\sym{***}&      -0.347\sym{***}&      -0.290\sym{***}&      -0.284\sym{***}&      -0.284\sym{***}&                     &      -0.299\sym{***}&      -0.290\sym{***}\\
+            &     (0.016)         &     (0.016)         &     (0.016)         &                     &     (0.036)         &     (0.038)         &     (0.018)         &     (0.017)         &     (0.017)         &                     &     (0.042)         &     (0.042)         \\
+\addlinespace
+Enrollment  &                     &       0.005         &      -0.040         &                     &                     &       0.017         &                     &       0.020\sym{*}  &       0.007         &                     &                     &       0.023         \\
+            &                     &     (0.008)         &     (0.022)         &                     &                     &     (0.022)         &                     &     (0.009)         &     (0.027)         &                     &                     &     (0.024)         \\
+\addlinespace
+Enrollment squared/100&                     &                     &       0.021\sym{*}  &                     &                     &                     &                     &                     &       0.006         &                     &                     &                     \\
+            &                     &                     &     (0.009)         &                     &                     &                     &                     &                     &     (0.012)         &                     &                     &                     \\
+\addlinespace
+Piecewise linear trend&                     &                     &                     &       0.100\sym{***}&                     &                     &                     &                     &                     &       0.130\sym{***}&                     &                     \\
+            &                     &                     &                     &     (0.026)         &                     &                     &                     &                     &                     &     (0.029)         &                     &                     \\
+\midrule
+Root MSE    &        6.65         &        6.66         &        6.63         &        8.01         &        6.62         &        6.66         &        7.82         &        7.81         &        7.81         &        8.64         &        8.20         &        8.20         \\
+N           &        2049         &        2049         &        2049         &        2001         &         415         &         415         &        2049         &        2049         &        2049         &        2001         &         415         &         415         \\
+\bottomrule
+\multicolumn{13}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{13}{l}{\footnotesize Grade 4. Columns 1-4 and 7-10 full sample, 5-6 and 11-12 +/-5 discontinuity sample.}\\
+\multicolumn{13}{l}{\footnotesize 2SLS, fsc instruments class size. Standard errors clustered by school.}\\
+\multicolumn{13}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}

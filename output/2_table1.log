@@ -1,0 +1,153 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/2_table1.log
+  log type:  text
+ opened on:   8 Sep 2026, 01:15:24
+
+. use "$root/output/al_clean.dta", clear
+
+. 
+. /*=========================================================================*/
+. *---rows of the table, in the paper's order, and their labels (Table I notes)---*
+. /*=========================================================================*/
+. local vars classize c_size tipuach verbsize mathsize avgverb avgmath
+
+. local lab_classize "Class size"
+
+. local lab_c_size   "Enrollment"
+
+. local lab_tipuach  "Percent disadvantaged"
+
+. local lab_verbsize "Reading size"
+
+. local lab_mathsize "Math size"
+
+. local lab_avgverb  "Average verbal"
+
+. local lab_avgmath  "Average math"
+
+. 
+. /*=========================================================================*/
+. *---write the table---*
+. /*=========================================================================*/
+. file open t1 using "$root/output/table1.tex", write replace
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table1.tex not found)
+
+. file write t1 "\begin{tabular}{lccccccc}" _n
+
+. file write t1 "\toprule" _n
+
+. file write t1 " & & & \multicolumn{5}{c}{Quantiles} \\" _n
+
+. file write t1 "Variable & Mean & S.D. & 0.10 & 0.25 & 0.50 & 0.75 & 0.90 \\" _n
+
+. file write t1 "\midrule" _n
+
+. 
+. *---Panel A: full sample---*
+. file write t1 "\multicolumn{8}{l}{A. Full sample} \\" _n
+
+. foreach g in 5 4 {                                   // grade 5 first, as in the paper
+  2.     count if grade == `g'
+  3.     local ncl = r(N)                                 // classes
+  4.     count if grade == `g' & sch_first == 1
+  5.     local nsch = r(N)                                // schools (tag built in 1_clean.do)
+  6.     display _n "Panel A, grade `g': `ncl' classes, `nsch' schools"
+  7.     file write t1 "\multicolumn{8}{l}{`g'th grade (`ncl' classes, `nsch' schools, tested in 1991)} \\" _n
+  8.     foreach v in `vars' {
+  9.         quietly summarize `v' if grade == `g', detail
+ 10.         local m   : display %6.1f r(mean)
+ 11.         local sd  : display %6.1f r(sd)
+ 12.         local p10 : display %6.1f r(p10)
+ 13.         local p25 : display %6.1f r(p25)
+ 14.         local p50 : display %6.1f r(p50)
+ 15.         local p75 : display %6.1f r(p75)
+ 16.         local p90 : display %6.1f r(p90)
+ 17.         display "`lab_`v'': mean `m'  sd `sd'  p10 `p10'  p25 `p25'  p50 `p50'  p75 `p75'  p90 `p90'"
+ 18.         file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & `=trim("`p10'")' & `=trim("`p25'")' & `=trim("`p50'")' & `=trim("`p75'")' & `=trim("`p90'")' \\" _n
+ 19.     }
+ 20. }
+  2,019
+  1,002
+
+Panel A, grade 5: 2019 classes, 1002 schools
+Class size: mean   29.9  sd    6.5  p10   21.0  p25   26.0  p50   31.0  p75   35.0  p90   38.0
+Enrollment: mean   77.7  sd   38.8  p10   31.0  p25   50.0  p50   72.0  p75  100.0  p90  128.0
+Percent disadvantaged: mean   14.1  sd   13.5  p10    2.0  p25    4.0  p50   10.0  p75   20.0  p90   35.0
+Reading size: mean   27.3  sd    6.6  p10   19.0  p25   23.0  p50   28.0  p75   32.0  p90   36.0
+Math size: mean   27.7  sd    6.6  p10   19.0  p25   23.0  p50   28.0  p75   33.0  p90   36.0
+Average verbal: mean   74.4  sd    7.7  p10   64.2  p25   69.8  p50   75.4  p75   79.8  p90   83.3
+Average math: mean   67.3  sd    9.6  p10   54.8  p25   61.1  p50   67.8  p75   74.1  p90   79.4
+  2,049
+  1,013
+
+Panel A, grade 4: 2049 classes, 1013 schools
+Class size: mean   30.3  sd    6.3  p10   22.0  p25   26.0  p50   31.0  p75   35.0  p90   38.0
+Enrollment: mean   78.3  sd   37.7  p10   30.0  p25   51.0  p50   74.0  p75  101.0  p90  127.0
+Percent disadvantaged: mean   13.8  sd   13.4  p10    2.0  p25    4.0  p50    9.0  p75   19.0  p90   35.0
+Reading size: mean   27.7  sd    6.5  p10   19.0  p25   24.0  p50   28.0  p75   32.0  p90   36.0
+Math size: mean   28.1  sd    6.5  p10   19.0  p25   24.0  p50   29.0  p75   33.0  p90   36.0
+Average verbal: mean   72.5  sd    8.0  p10   62.1  p25   67.7  p50   73.3  p75   78.2  p90   82.0
+Average math: mean   68.9  sd    8.8  p10   57.5  p25   63.6  p50   69.3  p75   75.0  p90   79.4
+
+. 
+. *---Panel B: +/-5 discontinuity sample (enrollment 36-45, 76-85, 116-125)---*
+. file write t1 "\midrule" _n
+
+. file write t1 "\multicolumn{8}{l}{B. +/-5 discontinuity sample (enrollment 36--45, 76--85, 116--125)} \\" _n
+
+. foreach g in 5 4 {
+  2.     count if grade == `g' & disc5 == 1
+  3.     local ncl = r(N)
+  4.     count if grade == `g' & disc5 == 1 & sch_first == 1
+  5.     local nsch = r(N)
+  6.     display _n "Panel B, grade `g': `ncl' classes, `nsch' schools"
+  7.     file write t1 "\multicolumn{8}{l}{`g'th grade (`ncl' classes, `nsch' schools)} \\" _n
+  8.     foreach v in `vars' {
+  9.         quietly summarize `v' if grade == `g' & disc5 == 1
+ 10.         local m  : display %6.1f r(mean)
+ 11.         local sd : display %6.1f r(sd)
+ 12.         display "`lab_`v'': mean `m'  sd `sd'"
+ 13.         file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & & & & & \\" _n
+ 14.     }
+ 15. }
+  471
+  224
+
+Panel B, grade 5: 471 classes, 224 schools
+Class size: mean   30.8  sd    7.4
+Enrollment: mean   76.4  sd   29.5
+Percent disadvantaged: mean   13.6  sd   13.2
+Reading size: mean   28.1  sd    7.3
+Math size: mean   28.5  sd    7.4
+Average verbal: mean   74.5  sd    8.2
+Average math: mean   67.0  sd   10.2
+  415
+  195
+
+Panel B, grade 4: 415 classes, 195 schools
+Class size: mean   31.1  sd    7.2
+Enrollment: mean   78.5  sd   30.0
+Percent disadvantaged: mean   12.9  sd   12.3
+Reading size: mean   28.3  sd    7.7
+Math size: mean   28.7  sd    7.7
+Average verbal: mean   72.5  sd    7.8
+Average math: mean   68.7  sd    9.1
+
+. 
+. file write t1 "\bottomrule" _n
+
+. file write t1 "\end{tabular}" _n
+
+. file close t1
+
+. 
+. /*=========================================================================*/
+. *closing up
+. /*=========================================================================*/
+. log close
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/2_table1.log
+  log type:  text
+ closed on:   8 Sep 2026, 01:15:24
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

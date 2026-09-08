@@ -1,0 +1,55 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/3_figure1.log
+  log type:  text
+ opened on:   8 Sep 2026, 01:15:24
+
+. use "$root/output/al_clean.dta", clear
+
+. 
+. /*=========================================================================*/
+. *---one panel per grade---*
+. /*=========================================================================*/
+. foreach g in 5 4 {
+  2.     preserve
+  3.     keep if grade == `g'
+  4.     collapse (mean) classize fsc, by(c_size)    // mean actual class size at each enrollment count;
+  5.                                                 // fsc is a function of c_size, so its mean is fsc itself
+.     summarize classize fsc c_size               // log check: fsc peaks at 40, actual peaks a little above
+  6.     twoway (line fsc c_size, lpattern(dash)) ///
+>            (line classize c_size), ///
+>         legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///
+>         title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///
+>         xlabel(0(20)220) ylabel(5(5)40)
+  7.     graph export "$root/output/figure1_grade`g'.png", replace
+  8.     restore                                     // back to the full two-grade file for the next panel
+  9. }
+(2,049 observations deleted)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    classize |        153    30.15331    6.551193          8         40
+         fsc |        153    31.00599    7.145539          8         40
+      c_size |        153    87.63399    50.48433          8        226
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade5.png not found)
+file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade5.png saved as PNG format
+(2,019 observations deleted)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    classize |        150    30.37073    6.380766          8   40.33333
+         fsc |        150    31.01667    6.948234          8         40
+      c_size |        150       85.96    48.18503          8        225
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade4.png not found)
+file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade4.png saved as PNG format
+
+. 
+. /*=========================================================================*/
+. *closing up
+. /*=========================================================================*/
+. log close
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/3_figure1.log
+  log type:  text
+ closed on:   8 Sep 2026, 01:15:27
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

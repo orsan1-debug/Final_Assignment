@@ -1,0 +1,26 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular}{l*{12}{c}}
+\toprule
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)}&\multicolumn{1}{c}{(6)}&\multicolumn{1}{c}{(7)}&\multicolumn{1}{c}{(8)}&\multicolumn{1}{c}{(9)}&\multicolumn{1}{c}{(10)}&\multicolumn{1}{c}{(11)}&\multicolumn{1}{c}{(12)}\\
+            &\multicolumn{1}{c}{Class size}&\multicolumn{1}{c}{Class size}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Class size}&\multicolumn{1}{c}{Class size}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Reading}&\multicolumn{1}{c}{Math}&\multicolumn{1}{c}{Math}\\
+\midrule
+fsc         &       0.704\sym{***}&       0.542\sym{***}&      -0.111\sym{***}&      -0.150\sym{***}&      -0.009         &      -0.125\sym{*}  &       0.772\sym{***}&       0.670\sym{***}&      -0.085\sym{**} &      -0.089\sym{*}  &       0.038         &      -0.033         \\
+            &     (0.025)         &     (0.037)         &     (0.029)         &     (0.039)         &     (0.041)         &     (0.051)         &     (0.023)         &     (0.033)         &     (0.031)         &     (0.040)         &     (0.040)         &     (0.050)         \\
+\addlinespace
+Percent disadvantaged&      -0.076\sym{***}&      -0.053\sym{***}&      -0.359\sym{***}&      -0.354\sym{***}&      -0.354\sym{***}&      -0.337\sym{***}&      -0.054\sym{***}&      -0.039\sym{***}&      -0.340\sym{***}&      -0.340\sym{***}&      -0.292\sym{***}&      -0.282\sym{***}\\
+            &     (0.011)         &     (0.010)         &     (0.014)         &     (0.015)         &     (0.018)         &     (0.019)         &     (0.009)         &     (0.009)         &     (0.015)         &     (0.016)         &     (0.017)         &     (0.017)         \\
+\addlinespace
+Enrollment  &                     &       0.043\sym{***}&                     &       0.010         &                     &       0.031\sym{***}&                     &       0.027\sym{***}&                     &       0.001         &                     &       0.019\sym{*}  \\
+            &                     &     (0.006)         &                     &     (0.006)         &                     &     (0.008)         &                     &     (0.005)         &                     &     (0.007)         &                     &     (0.008)         \\
+\midrule
+Root MSE    &        4.56         &        4.38         &        6.08         &        6.08         &        8.34         &        8.29         &        4.20         &        4.13         &        6.64         &        6.64         &        7.83         &        7.81         \\
+R-squared   &       0.516         &       0.553         &       0.374         &       0.375         &       0.246         &       0.254         &       0.561         &       0.575         &       0.311         &       0.311         &       0.203         &       0.207         \\
+N           &        2019         &        2019         &        2019         &        2019         &        2018         &        2018         &        2049         &        2049         &        2049         &        2049         &        2049         &        2049         \\
+\bottomrule
+\multicolumn{13}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{13}{l}{\footnotesize Columns 1-6 grade 5, columns 7-12 grade 4. Standard errors clustered by school.}\\
+\multicolumn{13}{l}{\footnotesize fsc = enrollment / [int((enrollment - 1)/40) + 1].}\\
+\multicolumn{13}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}
+}

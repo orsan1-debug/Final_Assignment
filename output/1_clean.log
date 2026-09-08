@@ -1,0 +1,502 @@
+------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/1_clean.log
+  log type:  text
+ opened on:   8 Sep 2026, 12:44:11
+
+. 
+. /*=========================================================================*/
+. *---1. Load and stack the two grade files---*
+. * Paper repeats every table for grades 5 and 4 (Angrist, Section I, p 538; Table II, p 551)
+. * We create one combined file and a loop over grade for tables/figures (STATA_RULES slide 6)
+. /*=========================================================================*/
+. 
+. *append data (not merge)
+. use "$root/data/final4.dta", clear
+
+. append using "$root/data/final5.dta"    // adds the grade 5 rows (README, W1 lab section 15)
+
+. describe                                // log check: 4,088 obs (raw classes), 58 var. 
+
+Contains data from C:/Users/otisr/Documents/ECX5479/Final_Assignment/data/final4.dta
+ Observations:         4,088                  
+    Variables:            58                  
+------------------------------------------------------------------------------------------------------------------------------------------
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+------------------------------------------------------------------------------------------------------------------------------------------
+schlcode        long    %12.0g                school code
+c_size          int     %8.0g                 
+c_boys          int     %8.0g                 
+c_girls         int     %8.0g                 
+c_numcl         byte    %8.0g                 
+c_pik           byte    %8.0g                 
+c_status        byte    %8.0g                 
+c_leom          byte    %8.0g                 
+c_tip           str1    %1s                   
+c_num4rd        byte    %8.0g                 number 4th grade classes in the school
+c_type          byte    %8.0g                 number of special ed classes
+flgrm4          float   %9.0g                 % failer in grammer fourth class in 91
+mrkgrm4         byte    %8.0g                 mean mark in grammer fourth class in 91
+ngrm4           int     %8.0g                 nr of pupils in gram fourth class in 91
+flmth4          float   %9.0g                 % failer in math fourth class in 91
+mrkmth4         byte    %8.0g                 mean mark in math fourth class in 91
+nmth4           int     %8.0g                 nr of pupils in math fourth class in 91
+towncode        long    %12.0g                town code
+townname        str18   %18s                  town name
+popcode         byte    %8.0g                 population code
+tip_a           byte    %8.0g                 
+grade           byte    %8.0g                 class grade
+classid         byte    %8.0g                 class sequence number (makbila)
+classize        byte    %8.0g                 
+_type_          byte    %8.0g                 
+_freq_          byte    %8.0g                 
+cohsize         int     %8.0g                 
+mathsize        byte    %8.0g                 number tested mathematics
+avgmath         float   %9.0g                 mathematics score - kovec2
+passmath        float   %9.0g                 pass mathematics test - kovec2
+verbsize        byte    %8.0g                 number tested reading
+avgverb         float   %9.0g                 grammar score - kovec2
+passverb        float   %9.0g                 pass grammar test - kovec2
+studchk         byte    %8.0g                 
+misskov2        byte    %8.0g                 
+missagg         byte    %8.0g                 
+nmiss_k         byte    %8.0g                 
+nmiss_a         byte    %8.0g                 
+classct         byte    %8.0g                 
+math_n          float   %9.0g                 
+flmath_n        float   %9.0g                 
+nmath_n         int     %8.0g                 
+verb_n          float   %9.0g                 
+flverb_n        float   %9.0g                 
+nverb_n         int     %8.0g                 
+impute          byte    %8.0g                 
+nverb_m         byte    %8.0g                 
+nmath_m         byte    %8.0g                 
+tip_s           byte    %8.0g                 
+townid          long    %12.0g                
+tipuach         byte    %8.0g                 
+c_num5rd        byte    %8.0g                 number 5rd grade classes in the school
+flgrm5          float   %9.0g                 % failer in grammer fifth class in 91
+mrkgrm5         byte    %8.0g                 mean mark in grammer fifth class in 91
+ngrm5           int     %8.0g                 nr of pupils grammer fifth class in 91
+flmth5          float   %9.0g                 % failer in math second class in 91
+mrkmth5         byte    %8.0g                 mean mark in math second class in 90
+nmth5           int     %8.0g                 nr of pupils in math second class in 91
+------------------------------------------------------------------------------------------------------------------------------------------
+Sorted by: 
+     Note: Dataset has changed since last saved.
+
+. tab grade                               // 2,059 grade 4, 2,029 grade 5, matches observations (dictionary row 23)
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |      2,059       50.37       50.37
+          5 |      2,029       49.63      100.00
+------------+-----------------------------------
+      Total |      4,088      100.00
+
+. isid grade schlcode classid             // unique key, would stop if any class appears twice (dictionary row 24; W3 lab Q5)
+
+. 
+. * check sample is Jewish public schools only
+. tab c_leom, missing                     // all 1, Jewish public schools only, matches paper (p. 538)
+
+     c_leom |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |      4,088      100.00      100.00
+------------+-----------------------------------
+      Total |      4,088      100.00
+
+. tab c_pik, missing                      // 1 secular, 2 religious only: matches paper, nothing to drop (p. 538)
+
+      c_pik |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |      3,084       75.44       75.44
+          2 |      1,004       24.56      100.00
+------------+-----------------------------------
+      Total |      4,088      100.00
+
+. 
+. 
+. /*=========================================================================*/
+. *---2. Fix coding errors in the grade 5 scores---*
+. * Two data errors flagged in the dictionary (final5 sheet):
+. *   - one class has its reading and math averages recorded as score + 100 (rows 30, 33)
+. *   - one class has mathsize = 0, so nobody sat the math test, yet avgmath = 0 (row 29)
+. /*=========================================================================*/
+. 
+. *--- errors
+. list grade schlcode classid avgverb avgmath mathsize verbsize if avgverb > 100 & !missing(avgverb)   // the +100 class
+
+      +----------------------------------------------------------------------+
+      | grade   schlcode   classid   avgverb   avgmath   mathsize   verbsize |
+      |----------------------------------------------------------------------|
+2401. |     5      21194         3   187.606   181.246          5          5 |
+      +----------------------------------------------------------------------+
+
+. list grade schlcode classid avgverb avgmath mathsize verbsize if mathsize == 0                        // the untested class
+
+      +----------------------------------------------------------------------+
+      | grade   schlcode   classid   avgverb   avgmath   mathsize   verbsize |
+      |----------------------------------------------------------------------|
+3569. |     5      51185         1     82.67         0          0         18 |
+      +----------------------------------------------------------------------+
+
+. 
+. 
+. * fix scores: subtract the extra 100
+. replace avgverb = avgverb - 100 if avgverb > 100 & !missing(avgverb)    
+(1 real change made)
+
+. replace avgmath = avgmath - 100 if avgmath > 100 & !missing(avgmath)    // (W3 lab Q3)
+(1 real change made)
+
+. 
+. * mathsize 0 means no math test sat, so the 0 is not a score: set to missing
+. count if mathsize == 0                          
+  1
+
+. replace avgmath = . if mathsize == 0            // sets to missing, (W3 lab Q5)
+(1 real change made, 1 to missing)
+
+. 
+. 
+. /*=========================================================================*/
+. *---3. Sample restrictions (Angrist, fn 11, p 542) and a school tag---*
+. * Paper keeps classes under 45 pupils and schools with at least 5 enrolled (Angrist, fn 11, p 542)
+. *
+. * This stated threshold (c_size >= 5) doesn't match their applied threshold (c_size > 5, AngristLavy_Table2.do line 32),
+. * which drops the one school at exactly 5. We follow their method, so we drop
+. * classize >= 45 and c_size <= 5: 2,019 classes and 1,002 schools (Angrist, Table I, p 539)
+. *
+. * Classes with no score in either subject are dropped, 4 grade 4 and 5 grade 5,
+. * same ones the paper could not impute (Angrist, Data Appendix, p 571)
+. *
+. * sch_first tags one class per school-grade so schools can be counted (Angrist, Table I, p 539)
+. /*=========================================================================*/
+. 
+. *--- fn 11 as written (keep c_size >= 5) vs the authors' code (c_size > 5, AngristLavy_Table2.do line 32)
+. *--- their stated threshold doesnt match method, we follow their method to define our threshold.
+. *--- only 1 school at 5, isolated from rest of sample, reasonable to follow their applied threshold
+. 
+. count if grade == 5 & classize < 45 & c_size >= 5 & !(missing(avgverb) & missing(avgmath))   // 2020, fn 11 as written
+  2,020
+
+. count if grade == 5 & classize < 45 & c_size >  5 & !(missing(avgverb) & missing(avgmath))   // 2019, matches paper sample size
+  2,019
+
+. 
+. 
+. tab c_size if c_size <= 15              // only 1 school at 5, next lowest is 3 schools at 8
+
+     c_size |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          5 |          1        1.56        1.56
+          8 |          3        4.69        6.25
+          9 |          4        6.25       12.50
+         10 |          5        7.81       20.31
+         11 |          5        7.81       28.12
+         12 |         10       15.62       43.75
+         13 |          5        7.81       51.56
+         14 |         13       20.31       71.88
+         15 |         18       28.12      100.00
+------------+-----------------------------------
+      Total |         64      100.00
+
+. summarize c_size, detail                // school at 5 well below the rest: next 8, 1st percentile 14 (W1 lab section 1)
+
+                           c_size
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%           14              5
+ 5%           22              8
+10%           30              8       Obs               4,088
+25%           50              8       Sum of wgt.       4,088
+
+50%           73                      Mean           78.13796
+                        Largest       Std. dev.      38.48551
+75%          101            226
+90%          128            226       Variance       1481.135
+95%          150            226       Skewness        .740134
+99%          194            226       Kurtosis       3.725157
+
+. 
+. 
+. *--- we follow their method
+. tab grade if classize >= 45             // 6 grade 4, 4 grade 5 (W1 lab section 8)
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |          6       60.00       60.00
+          5 |          4       40.00      100.00
+------------+-----------------------------------
+      Total |         10      100.00
+
+. tab grade if c_size <= 5                // 1 grade 5, the school at exactly 5
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          5 |          1      100.00      100.00
+------------+-----------------------------------
+      Total |          1      100.00
+
+. drop if classize >= 45 | c_size <= 5    // drops classes on both threshold bounds (W3 lab Q5)
+(11 observations deleted)
+
+. 
+. 
+. *--- Drop classes with no scores, as in the paper (Angrist, Data Appendix, p 571)
+. tab grade if missing(avgverb) & missing(avgmath)   // total: 9, 4 in grade 4 and 5 in grade 5, matches paper
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |          4       44.44       44.44
+          5 |          5       55.56      100.00
+------------+-----------------------------------
+      Total |          9      100.00
+
+. drop if missing(avgverb) & missing(avgmath)
+(9 observations deleted)
+
+. 
+. 
+. 
+. *--- NEW VARIABLE sch_first: one class per school gets a 1, so summing it counts schools as Table I does (Angrist, Table I, p 539)
+. bysort grade schlcode: gen sch_first = (_n == 1)   // _n = row number within school, 1 for the first class (code: W1 lab section 7 + W4 
+> lab Q4)
+
+. label variable sch_first "1 for one class per school-grade"   // (W4 lab section 0)
+
+. 
+. *--- verification  vs Angrist, Table I, p 539 and Table II p 551 (math N)
+. tab grade                               // classes: 2,049 grade 4, 2,019 grade 5, matches paper
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |      2,049       50.37       50.37
+          5 |      2,019       49.63      100.00
+------------+-----------------------------------
+      Total |      4,068      100.00
+
+. tab grade if sch_first == 1             // schools: 1,013 grade 4, 1,002 grade 5, matches paper
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |      1,013       50.27       50.27
+          5 |      1,002       49.73      100.00
+------------+-----------------------------------
+      Total |      2,015      100.00
+
+. count if grade == 5 & !missing(avgverb) // classes with a reading score: 2,019, matches paper (Angrist, Table II, p 551)
+  2,019
+
+. count if grade == 5 & !missing(avgmath) // classes with a math score: 2,018, matches paper; one below reading, the untested class from s
+> ection 2
+  2,018
+
+. 
+. 
+. /*=========================================================================*/
+. *---4. Maimonides' rule class size, fsc (Angrist, eq 1, p 540)---*
+. 
+. * New variable: fsc = es / [int((es - 1)/40) + 1]: class size predicted by the rule from September enrollment es.
+. *              - Used as the instrument for actual class size in Tables III to V         
+. *
+. * Following Angrist (p 550)
+. *   - es is c_size, September enrollment, not the spring count cohsize (dictionary rows 3, 28)
+. *   - September is set before parents can react to class sizes, so it cannot carry their choices (Angrist, p 550)
+. /*=========================================================================*/
+. 
+. *--- new variable fsc
+. gen fsc = c_size / (floor((c_size - 1)/40) + 1)   // floor() is the paper's int() (code: W1 lab section 8, W4 lab Q4c)
+
+. * floor() is more flexible and is courses rounding function (rounds down +'s and -'s). Stata's int() only for positives. 
+. * same result here as no negative class sizes (obviously), floor() matches the paper's definition (Angrist, p 540)
+. 
+. label variable fsc "predicted class size, Maimonides' rule (eq 1)"   // (code: W4 lab section 0)
+
+. summarize fsc classize c_size cohsize   // fsc 8 to 40 by construction; class size 30.1 and enrollment 78.0 
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+         fsc |      4,068    31.02127    5.986551          8         40
+    classize |      4,068    30.10742    6.437879          7         44
+      c_size |      4,068    78.02409    38.25767          8        226
+     cohsize |      4,068    74.82448    36.94395          8        225
+
+.                                         //  - sit between the grade means in Angrist, Table I (code: W1 lab section 1)
+. 
+. 
+. 
+. /*=========================================================================*/
+. *---5. Discontinuity samples and segment dummies (Angrist, pp 540, 557-559)---*
+. * Why: class size jumps at enrollment 40, 80, 120, where one more pupil splits the grade. Schools just
+. * either side of a cutoff have similar enrollment but very different fsc, so which side a school lands on
+. * is as good as random (Angrist, p 565; Week 4 lecture, slide 1).
+. *   - Tables III to VI rerun the models on these samples
+. *   - there is a cost in precision, 471 classes instead of 2,019 in grade 5 (Angrist, Table I, p 539)
+. *
+. * New variables
+. *   - seg1 seg2 seg3 = 1 if enrollment in [36,45], [76,85], [116,125] (Angrist, p 540)
+. *       - one dummy per cutoff, 40, 80, 120
+. *   - disc5 = 1 if in any segment, the +/-5 sample (Angrist, p 540, p 557)
+. *       - keeps only near-cutoff schools for Table I panel B, Table III panel B, Tables IV to VI
+. *   - disc3 = 1 if enrollment in [38,43], [78,83], [118,123], the +/-3 sample (Angrist, p 559)
+. *       - same, tighter band, for the +/-3 columns of Table VI
+. *   - seg1 seg2 double as Table VI's segment dummies (Angrist, p 559)
+. *       - control for which cutoff a school is at, seg3 omitted
+. *
+. * Following the text, not the table header
+. *   - Table I panel B header says 116-124, the text says [116,125] (Angrist, p 540, p 557)
+. *   - 125 gives the paper's own 471 and 415 classes, so the header is a typo
+. *
+. * sch_first still counts schools inside these samples
+. *   - c_size is the same for every class in a school (dictionary row 3), so a school is wholly in or out
+. /*=========================================================================*/
+. 
+. *--- +/-5 sample, one dummy per cutoff then their union
+. gen seg1 = inrange(c_size, 36, 45)      // cutoff 40 (Angrist, p 540; code: W4 lab Q10b, W1 lab section 8)
+
+. gen seg2 = inrange(c_size, 76, 85)      // cutoff 80
+
+. gen seg3 = inrange(c_size, 116, 125)    // cutoff 120, 125 as in the text (Angrist, p 540, p 557)
+
+. gen disc5 = (seg1 | seg2 | seg3)        // 1 if near any cutoff (code: W5 lab Bonus 5)
+
+. label variable disc5 "+/-5 discontinuity sample"   // (code: W4 lab section 0)
+
+. 
+. *--- +/-3 sample, no segment dummies: Table VI reuses seg1 seg2
+. gen disc3 = inrange(c_size, 38, 43) | inrange(c_size, 78, 83) | inrange(c_size, 118, 123)   // (Angrist, p 559)
+
+. label variable disc3 "+/-3 discontinuity sample"
+
+. 
+. *--- verification vs Angrist, Table I panel B p 539, Table VI p 558
+. tab grade disc5                         // 415 grade 4, 471 grade 5, matches paper (code: W1 lab section 8)
+
+           |  +/-5 discontinuity
+     class |        sample
+     grade |         0          1 |     Total
+-----------+----------------------+----------
+         4 |     1,634        415 |     2,049 
+         5 |     1,548        471 |     2,019 
+-----------+----------------------+----------
+     Total |     3,182        886 |     4,068 
+
+. tab grade disc3                         // 265 grade 4, 302 grade 5, matches paper
+
+           |  +/-3 discontinuity
+     class |        sample
+     grade |         0          1 |     Total
+-----------+----------------------+----------
+         4 |     1,784        265 |     2,049 
+         5 |     1,717        302 |     2,019 
+-----------+----------------------+----------
+     Total |     3,501        567 |     4,068 
+
+. tab grade if disc5 == 1 & sch_first == 1   // schools: 195 grade 4, 224 grade 5, matches paper
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |        195       46.54       46.54
+          5 |        224       53.46      100.00
+------------+-----------------------------------
+      Total |        419      100.00
+
+. 
+. 
+. /*=========================================================================*/
+. *--- Close, Save the analysis file, and verify clean---*
+. * One file every table and figure reads, saved to output/ so data/ stays untouched (STATA_RULES slide 5)
+. /*=========================================================================*/
+. isid grade schlcode classid             // cleared: key still unique after the drops (safeguard, errors and stops if not)
+
+. describe                                // cleared: as expected, 4,068 obs and 65 variables: 58 raw + 7 new
+
+Contains data from C:/Users/otisr/Documents/ECX5479/Final_Assignment/data/final4.dta
+ Observations:         4,068                  
+    Variables:            65                  
+------------------------------------------------------------------------------------------------------------------------------------------
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+------------------------------------------------------------------------------------------------------------------------------------------
+schlcode        long    %12.0g                school code
+c_size          int     %8.0g                 
+c_boys          int     %8.0g                 
+c_girls         int     %8.0g                 
+c_numcl         byte    %8.0g                 
+c_pik           byte    %8.0g                 
+c_status        byte    %8.0g                 
+c_leom          byte    %8.0g                 
+c_tip           str1    %1s                   
+c_num4rd        byte    %8.0g                 number 4th grade classes in the school
+c_type          byte    %8.0g                 number of special ed classes
+flgrm4          float   %9.0g                 % failer in grammer fourth class in 91
+mrkgrm4         byte    %8.0g                 mean mark in grammer fourth class in 91
+ngrm4           int     %8.0g                 nr of pupils in gram fourth class in 91
+flmth4          float   %9.0g                 % failer in math fourth class in 91
+mrkmth4         byte    %8.0g                 mean mark in math fourth class in 91
+nmth4           int     %8.0g                 nr of pupils in math fourth class in 91
+towncode        long    %12.0g                town code
+townname        str18   %18s                  town name
+popcode         byte    %8.0g                 population code
+tip_a           byte    %8.0g                 
+grade           byte    %8.0g                 class grade
+classid         byte    %8.0g                 class sequence number (makbila)
+classize        byte    %8.0g                 
+_type_          byte    %8.0g                 
+_freq_          byte    %8.0g                 
+cohsize         int     %8.0g                 
+mathsize        byte    %8.0g                 number tested mathematics
+avgmath         float   %9.0g                 mathematics score - kovec2
+passmath        float   %9.0g                 pass mathematics test - kovec2
+verbsize        byte    %8.0g                 number tested reading
+avgverb         float   %9.0g                 grammar score - kovec2
+passverb        float   %9.0g                 pass grammar test - kovec2
+studchk         byte    %8.0g                 
+misskov2        byte    %8.0g                 
+missagg         byte    %8.0g                 
+nmiss_k         byte    %8.0g                 
+nmiss_a         byte    %8.0g                 
+classct         byte    %8.0g                 
+math_n          float   %9.0g                 
+flmath_n        float   %9.0g                 
+nmath_n         int     %8.0g                 
+verb_n          float   %9.0g                 
+flverb_n        float   %9.0g                 
+nverb_n         int     %8.0g                 
+impute          byte    %8.0g                 
+nverb_m         byte    %8.0g                 
+nmath_m         byte    %8.0g                 
+tip_s           byte    %8.0g                 
+townid          long    %12.0g                
+tipuach         byte    %8.0g                 
+c_num5rd        byte    %8.0g                 number 5rd grade classes in the school
+flgrm5          float   %9.0g                 % failer in grammer fifth class in 91
+mrkgrm5         byte    %8.0g                 mean mark in grammer fifth class in 91
+ngrm5           int     %8.0g                 nr of pupils grammer fifth class in 91
+flmth5          float   %9.0g                 % failer in math second class in 91
+mrkmth5         byte    %8.0g                 mean mark in math second class in 90
+nmth5           int     %8.0g                 nr of pupils in math second class in 91
+sch_first       float   %9.0g                 1 for one class per school-grade
+fsc             float   %9.0g                 predicted class size, Maimonides' rule (eq 1)
+seg1            float   %9.0g                 
+seg2            float   %9.0g                 
+seg3            float   %9.0g                 
+disc5           float   %9.0g                 +/-5 discontinuity sample
+disc3           float   %9.0g                 +/-3 discontinuity sample
+------------------------------------------------------------------------------------------------------------------------------------------
+Sorted by: grade  schlcode
+     Note: Dataset has changed since last saved.
+
+. save "$root/output/al_clean.dta", replace   // save fixed data
+file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/al_clean.dta saved
+
+. log close                               // close log
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/1_clean.log
+  log type:  text
+ closed on:   8 Sep 2026, 12:44:11
+------------------------------------------------------------------------------------------------------------------------------------------

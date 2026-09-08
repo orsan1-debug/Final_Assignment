@@ -1,0 +1,603 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/7_table4_5.log
+  log type:  text
+ opened on:   8 Sep 2026, 01:15:29
+
+. use "$root/output/al_clean.dta", clear
+
+. 
+. /*=========================================================================*/
+. *---enrollment controls used only in these two tables (paper p. 555)---*
+. /*=========================================================================*/
+. gen c_size2 = c_size^2 / 100                       // "Enrollment squared/100"
+
+. label variable c_size2 "enrollment squared / 100"
+
+. 
+. * piecewise linear trend: slopes equal the slopes of fsc on each segment (1, 1/2, 1/3, 1/4),
+. * so any variation left around it comes only from the jumps at 40, 80, 120.
+. * Defined on [0,160]: classes with enrollment above 160 are missing and drop out of
+. * column (4), which is why its N is 1961 (grade 5) and 2001 (grade 4) in the paper.
+. gen     trend = c_size                             if c_size <= 40
+(3,479 missing values generated)
+
+. replace trend = 20 + c_size/2                      if inrange(c_size, 41, 80)
+(1,753 real changes made)
+
+. replace trend = 100/3 + c_size/3                   if inrange(c_size, 81, 120)
+(1,226 real changes made)
+
+. replace trend = 130/3 + c_size/4                   if inrange(c_size, 121, 160)
+(394 real changes made)
+
+. label variable trend "piecewise linear enrollment trend (p. 555)"
+
+. count if missing(trend)                            // 58 (grade 5) + 48 (grade 4) classes above 160
+  106
+
+. 
+. gen full = 1                                       // full-sample marker (as in 6_table3.do)
+
+. 
+. /*=========================================================================*/
+. *---the six specifications: controls and sample---*
+. /*=========================================================================*/
+. local ctrl1 tipuach
+
+. local ctrl2 tipuach c_size
+
+. local ctrl3 tipuach c_size c_size2
+
+. local ctrl4 trend
+
+. local ctrl5 tipuach
+
+. local ctrl6 tipuach c_size
+
+. local smp1 full
+
+. local smp2 full
+
+. local smp3 full
+
+. local smp4 full
+
+. local smp5 disc5
+
+. local smp6 disc5
+
+. 
+. local name_g5 table4                               // grade 5 is Table IV, grade 4 is Table V
+
+. local name_g4 table5
+
+. 
+. /*=========================================================================*/
+. *---2SLS, one table per grade---*
+. /*=========================================================================*/
+. foreach g in 5 4 {
+  2.     foreach y in avgverb avgmath {
+  3.         summarize `y' if grade == `g' & full == 1
+  4.         summarize `y' if grade == `g' & disc5 == 1  // "Mean score (s.d.)" rows (log only)
+  5.         forvalues s = 1/6 {
+  6.             ivregress 2sls `y' `ctrl`s'' (classize = fsc) ///
+>                 if grade == `g' & `smp`s'' == 1, vce(cluster schlcode)
+  7.             estimates store t45_g`g'_`y'_s`s'
+  8.         }
+  9.     }
+ 10.     esttab t45_g`g'_avgverb_s1 t45_g`g'_avgverb_s2 t45_g`g'_avgverb_s3 ///
+>            t45_g`g'_avgverb_s4 t45_g`g'_avgverb_s5 t45_g`g'_avgverb_s6 ///
+>            t45_g`g'_avgmath_s1 t45_g`g'_avgmath_s2 t45_g`g'_avgmath_s3 ///
+>            t45_g`g'_avgmath_s4 t45_g`g'_avgmath_s5 t45_g`g'_avgmath_s6 ///
+>         using "$root/output/`name_g`g''.tex", replace booktabs ///
+>         b(%7.3f) se(%7.3f) keep(classize tipuach c_size c_size2 trend) ///
+>         coeflabels(classize "Class size" tipuach "Percent disadvantaged" ///
+>                    c_size "Enrollment" c_size2 "Enrollment squared/100" ///
+>                    trend "Piecewise linear trend") ///
+>         stats(rmse N, fmt(2 0) labels("Root MSE" "N")) ///
+>         mtitles("Reading" "Reading" "Reading" "Reading" "Reading" "Reading" ///
+>                 "Math" "Math" "Math" "Math" "Math" "Math") ///
+>         addnotes("Grade `g'. Columns 1-4 and 7-10 full sample, 5-6 and 11-12 +/-5 discontinuity sample." ///
+>                  "2SLS, fsc instruments class size. Standard errors clustered by school.")
+ 11. }
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgverb |      2,019    74.38641    7.684038       34.8      93.86
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgverb |        471    74.49138    8.180908       34.8      93.81
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,019
+                                                  Wald chi2(2)    =     595.02
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3568
+                                                  Root MSE        =     6.1612
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1584777   .0416256    -3.81   0.000    -.2400624   -.0768929
+     tipuach |  -.3714599   .0159817   -23.24   0.000    -.4027836   -.3401363
+       _cons |   84.36879   1.344373    62.76   0.000     81.73387    87.00371
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,019
+                                                  Wald chi2(3)    =     582.76
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3397
+                                                  Root MSE        =     6.2424
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2770197   .0758487    -3.65   0.000    -.4256804    -.128359
+     tipuach |  -.3687071   .0160188   -23.02   0.000    -.4001034   -.3373107
+      c_size |   .0222903    .009124     2.44   0.015     .0044076     .040173
+       _cons |   86.14565   1.785436    48.25   0.000     82.64626    89.64504
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,019
+                                                  Wald chi2(4)    =     606.12
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3428
+                                                  Root MSE        =     6.2279
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2631278   .0937161    -2.81   0.005    -.4468079   -.0794477
+     tipuach |  -.3687087   .0159984   -23.05   0.000     -.400065   -.3373524
+      c_size |   .0131031   .0261633     0.50   0.616    -.0381759    .0643822
+     c_size2 |   .0041682   .0099564     0.42   0.675     -.015346    .0236823
+       _cons |   86.12938   1.797086    47.93   0.000     82.60715     89.6516
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size c_size2 fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      1,961
+                                                  Wald chi2(2)    =      42.25
+                                                  Prob > chi2     =     0.0000
+                                                  Root MSE        =     7.7144
+
+                             (Std. err. adjusted for 990 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1898637   .1216194    -1.56   0.118    -.4282333    .0485059
+       trend |   .1369107    .035901     3.81   0.000     .0665461    .2072753
+       _cons |   72.55187   1.977625    36.69   0.000      68.6758    76.42795
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  trend fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        471
+                                                  Wald chi2(2)    =     111.51
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3139
+                                                  Root MSE        =     6.7689
+
+                             (Std. err. adjusted for 224 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   -.410168   .1176445    -3.49   0.000    -.6407469   -.1795891
+     tipuach |  -.4772855   .0484219    -9.86   0.000    -.5721907   -.3823803
+       _cons |      93.62   4.001931    23.39   0.000     85.77636    101.4636
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        471
+                                                  Wald chi2(3)    =     108.98
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2401
+                                                  Root MSE        =      7.124
+
+                             (Std. err. adjusted for 224 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.5823683    .205291    -2.84   0.005    -.9847313   -.1800053
+     tipuach |  -.4611878   .0464016    -9.94   0.000    -.5521333   -.3702424
+      c_size |   .0529979   .0316929     1.67   0.094     -.009119    .1151149
+       _cons |   94.66023   4.621571    20.48   0.000     85.60212    103.7183
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgmath |      2,018    67.29267    9.598066      27.69      93.93
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgmath |        471    67.03169    10.20302      27.69      92.69
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,018
+                                                  Wald chi2(2)    =     392.29
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2448
+                                                  Root MSE        =     8.3387
+
+                           (Std. err. adjusted for 1,001 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0130465    .057669    -0.23   0.821    -.1260757    .0999827
+     tipuach |  -.3546427   .0197872   -17.92   0.000    -.3934249   -.3158606
+       _cons |    72.6866   1.843221    39.43   0.000     69.07396    76.29925
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,018
+                                                  Wald chi2(3)    =     400.08
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2336
+                                                  Root MSE        =     8.4004
+
+                           (Std. err. adjusted for 1,001 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2311484   .0984804    -2.35   0.019    -.4241663   -.0381304
+     tipuach |  -.3495862   .0199453   -17.53   0.000    -.3886783   -.3104941
+      c_size |    .041006   .0116615     3.52   0.000     .0181498    .0638622
+       _cons |   75.95636   2.351646    32.30   0.000     71.34722     80.5655
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,018
+                                                  Wald chi2(4)    =     399.07
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2292
+                                                  Root MSE        =     8.4245
+
+                           (Std. err. adjusted for 1,001 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2644218   .1230942    -2.15   0.032     -.505682   -.0231617
+     tipuach |  -.3495658   .0199816   -17.49   0.000     -.388729   -.3104027
+      c_size |   .0630518   .0355328     1.77   0.076    -.0065913    .1326948
+     c_size2 |  -.0100023   .0137657    -0.73   0.467    -.0369826     .016978
+       _cons |   75.99324   2.377544    31.96   0.000     71.33334    80.65314
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size c_size2 fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      1,960
+                                                  Wald chi2(2)    =      70.34
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.0260
+                                                  Root MSE        =     9.4922
+
+                             (Std. err. adjusted for 989 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.2053301   .1448469    -1.42   0.156    -.4892248    .0785645
+       trend |   .1939779    .043013     4.51   0.000      .109674    .2782818
+       _cons |   62.79047   2.348729    26.73   0.000     58.18705     67.3939
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  trend fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        471
+                                                  Wald chi2(2)    =     114.01
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2615
+                                                  Root MSE        =      8.759
+
+                             (Std. err. adjusted for 224 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1854642   .1546162    -1.20   0.230    -.4885065     .117578
+     tipuach |   -.458861   .0517552    -8.87   0.000    -.5602993   -.3574226
+       _cons |   78.98461   5.195258    15.20   0.000     68.80209    89.16713
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        471
+                                                  Wald chi2(3)    =     108.31
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2093
+                                                  Root MSE        =     9.0628
+
+                             (Std. err. adjusted for 224 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.4434526   .2495569    -1.78   0.076    -.9325752      .04567
+     tipuach |  -.4347436   .0499128    -8.71   0.000     -.532571   -.3369163
+      c_size |   .0794009   .0370326     2.14   0.032     .0068184    .1519834
+       _cons |   80.54307    5.78655    13.92   0.000     69.20164     91.8845
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table4.tex not found)
+(output written to C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table4.tex)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgverb |      2,049    72.48938    7.991311      24.29       94.9
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgverb |        415    72.46781    7.831529   46.38667       94.9
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,049
+                                                  Wald chi2(2)    =     491.77
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3073
+                                                  Root MSE        =     6.6493
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1100297   .0404128    -2.72   0.006    -.1892374    -.030822
+     tipuach |   -.346161   .0158815   -21.80   0.000    -.3772882   -.3150337
+       _cons |   80.60942   1.302105    61.91   0.000     78.05734     83.1615
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,049
+                                                  Wald chi2(3)    =     491.28
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3059
+                                                  Root MSE        =      6.656
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1328693   .0608487    -2.18   0.029    -.2521307    -.013608
+     tipuach |  -.3448726   .0159069   -21.68   0.000    -.3760495   -.3136956
+      c_size |   .0046057   .0079432     0.58   0.562    -.0109627    .0201742
+       _cons |   80.92248   1.493217    54.19   0.000     77.99583    83.84913
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,049
+                                                  Wald chi2(4)    =     502.67
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3120
+                                                  Root MSE        =     6.6267
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0739079   .0682537    -1.08   0.279    -.2076827     .059867
+     tipuach |  -.3464434   .0158787   -21.82   0.000     -.377565   -.3153217
+      c_size |  -.0396427   .0217603    -1.82   0.068    -.0822922    .0030067
+     c_size2 |   .0210171   .0094687     2.22   0.026     .0024587    .0395755
+       _cons |    81.0364   1.474941    54.94   0.000     78.14557    83.92724
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size c_size2 fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,001
+                                                  Wald chi2(2)    =      22.75
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.0021
+                                                  Root MSE        =     8.0108
+
+                           (Std. err. adjusted for 1,003 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1472275   .0887327    -1.66   0.097    -.3211404    .0266854
+       trend |   .1000656   .0260409     3.84   0.000     .0490265    .1511048
+       _cons |   71.39301   1.716407    41.59   0.000     68.02892    74.75711
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  trend fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        415
+                                                  Wald chi2(2)    =      98.87
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2842
+                                                  Root MSE        =     6.6178
+
+                             (Std. err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0979544   .0948455    -1.03   0.302    -.2838482    .0879394
+     tipuach |  -.3544849   .0357651    -9.91   0.000    -.4245833   -.2843866
+       _cons |   80.07864   3.084707    25.96   0.000     74.03273    86.12456
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        415
+                                                  Wald chi2(3)    =     102.42
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2755
+                                                  Root MSE        =      6.658
+
+                             (Std. err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.1501171   .1312903    -1.14   0.253    -.4074414    .1072073
+     tipuach |  -.3474991   .0375198    -9.26   0.000    -.4210365   -.2739617
+      c_size |   .0168148   .0218226     0.77   0.441    -.0259567    .0595862
+       _cons |   80.29288    3.18196    25.23   0.000     74.05635     86.5294
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgmath |      2,049    68.86368     8.76763      21.41   94.09091
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgmath |        415    68.67383    9.084947      37.25      92.67
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,049
+                                                  Wald chi2(2)    =     327.22
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2043
+                                                  Root MSE        =     7.8189
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |    .048731   .0520148     0.94   0.349    -.0532161    .1506781
+     tipuach |  -.2895301   .0175813   -16.47   0.000    -.3239887   -.2550714
+       _cons |   71.39347   1.689427    42.26   0.000     68.08226    74.70469
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,049
+                                                  Wald chi2(3)    =     330.68
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2056
+                                                  Root MSE        =     7.8127
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0496951   .0746852    -0.67   0.506    -.1960755    .0966852
+     tipuach |  -.2839778   .0174766   -16.25   0.000    -.3182312   -.2497243
+      c_size |   .0198482   .0092564     2.14   0.032     .0017059    .0379905
+       _cons |   72.74258    1.90351    38.21   0.000     69.01177    76.47339
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,049
+                                                  Wald chi2(4)    =     334.05
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2064
+                                                  Root MSE        =     7.8089
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0328246   .0844741    -0.39   0.698    -.1983908    .1327416
+     tipuach |  -.2844272   .0173918   -16.35   0.000    -.3185146   -.2503398
+      c_size |   .0071874   .0273832     0.26   0.793    -.0464827    .0608576
+     c_size2 |   .0060136   .0123539     0.49   0.626    -.0181996    .0302268
+       _cons |   72.77518   1.894121    38.42   0.000     69.06277    76.48758
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size c_size2 fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =      2,001
+                                                  Wald chi2(2)    =      46.28
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.0302
+                                                  Root MSE        =     8.6426
+
+                           (Std. err. adjusted for 1,003 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0982032   .0989595    -0.99   0.321    -.2921603    .0957539
+       trend |   .1301294   .0290092     4.49   0.000     .0732723    .1869864
+       _cons |   64.62406   1.893801    34.12   0.000     60.91227    68.33584
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  trend fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        415
+                                                  Wald chi2(2)    =      65.55
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.1834
+                                                  Root MSE        =     8.1997
+
+                             (Std. err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .0948009   .1260016     0.75   0.452    -.1521578    .3417596
+     tipuach |  -.2994572   .0417179    -7.18   0.000    -.3812228   -.2176917
+       _cons |   69.57265   4.263028    16.32   0.000     61.21727    77.92803
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach fsc
+
+Instrumental-variables 2SLS regression            Number of obs   =        415
+                                                  Wald chi2(3)    =      68.34
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.1836
+                                                  Root MSE        =     8.1989
+
+                             (Std. err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      z    P>|z|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .0234693   .1581206     0.15   0.882    -.2864415      .33338
+     tipuach |  -.2899043     .04246    -6.83   0.000    -.3731244   -.2066842
+      c_size |   .0229939   .0243874     0.94   0.346    -.0248046    .0707924
+       _cons |   69.86561   4.330047    16.14   0.000     61.37887    78.35234
+------------------------------------------------------------------------------
+Endogenous: classize
+Exogenous:  tipuach c_size fsc
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table5.tex not found)
+(output written to C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table5.tex)
+
+. * log check, class-size coefficient on reading: grade 5 columns (1)-(6) -.158 -.277 -.278 -.190 -.410 -.582,
+. * grade 4 -.110 -.133 -.125 -.147 -.098 -.150. Columns (1), (5), (6) equal the paper's; the
+. * enrollment-control columns differ from the published numbers (most in the quadratic column,
+. * grade 4: -.125 here vs -.074 published). The specification is the one the paper describes and
+. * the one in the authors' deposited code, so the gap lies between the published table and the
+. * deposited data, not in a coding choice (PROJECT_README: published numbers are a benchmark).
+. 
+. /*=========================================================================*/
+. *closing up
+. /*=========================================================================*/
+. log close
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/7_table4_5.log
+  log type:  text
+ closed on:   8 Sep 2026, 01:15:30
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

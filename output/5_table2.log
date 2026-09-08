@@ -1,0 +1,437 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/5_table2.log
+  log type:  text
+ opened on:   8 Sep 2026, 01:15:28
+
+. use "$root/output/al_clean.dta", clear
+
+. 
+. /*=========================================================================*/
+. *---Table II: the twelve regressions---*
+. /*=========================================================================*/
+. local spec1 classize
+
+. local spec2 classize tipuach
+
+. local spec3 classize tipuach c_size
+
+. 
+. foreach g in 5 4 {
+  2.     summarize avgverb avgmath if grade == `g'          // "Mean score (s.d.)" rows of the table (log only)
+  3.     foreach y in avgverb avgmath {
+  4.         forvalues s = 1/3 {
+  5.             reg `y' `spec`s'' if grade == `g', vce(cluster schlcode)
+  6.             estimates store t2_g`g'_`y'_s`s'
+  7.         }
+  8.     }
+  9. }
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgverb |      2,019    74.38641    7.684038       34.8      93.86
+     avgmath |      2,018    67.29267    9.598066      27.69      93.93
+
+Linear regression                               Number of obs     =      2,019
+                                                F(1, 1001)        =      43.45
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0354
+                                                Root MSE          =     7.5485
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .2210126   .0335294     6.59   0.000     .1552165    .2868087
+       _cons |   67.77037   1.067733    63.47   0.000     65.67512    69.86562
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,019
+                                                F(2, 1001)        =     305.47
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3671
+                                                Root MSE          =     6.1163
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0313879    .026177    -1.20   0.231     -.082756    .0199802
+     tipuach |  -.3499026   .0143569   -24.37   0.000    -.3780756   -.3217296
+       _cons |   80.26034   .8593444    93.40   0.000     78.57402    81.94667
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,019
+                                                F(3, 1001)        =     203.44
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3671
+                                                Root MSE          =     6.1175
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0251977    .032903    -0.77   0.444    -.0897646    .0393691
+     tipuach |  -.3507472   .0146787   -23.90   0.000    -.3795517   -.3219427
+      c_size |  -.0018474   .0060341    -0.31   0.760    -.0136884    .0099936
+       _cons |   80.23057     .86604    92.64   0.000     78.53111    81.93003
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,018
+                                                F(1, 1000)        =      64.20
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0481
+                                                Root MSE          =     9.3668
+
+                           (Std. err. adjusted for 1,001 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .3217141   .0401504     8.01   0.000     .2429255    .4005028
+       _cons |   57.66021   1.247056    46.24   0.000     55.21307    60.10736
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,018
+                                                F(2, 1000)        =     195.85
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2480
+                                                Root MSE          =     8.3272
+
+                           (Std. err. adjusted for 1,001 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .0758252   .0357642     2.12   0.034     .0056438    .1460066
+     tipuach |  -.3395271    .018225   -18.63   0.000    -.3752907   -.3037635
+       _cons |   69.81244   1.173558    59.49   0.000     67.50952    72.11536
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,018
+                                                F(3, 1000)        =     133.54
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2509
+                                                Root MSE          =     8.3135
+
+                           (Std. err. adjusted for 1,001 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .0185351   .0421394     0.44   0.660    -.0641568    .1012269
+     tipuach |  -.3316712   .0186739   -17.76   0.000    -.3683157   -.2950268
+      c_size |   .0171215   .0075319     2.27   0.023     .0023412    .0319017
+       _cons |   70.08537   1.169321    59.94   0.000     67.79077    72.37998
+------------------------------------------------------------------------------
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+     avgverb |      2,049    72.48938    7.991311      24.29       94.9
+     avgmath |      2,049    68.86368     8.76763      21.41   94.09091
+
+Linear regression                               Number of obs     =      2,049
+                                                F(1, 1012)        =      16.57
+                                                Prob > F          =     0.0001
+                                                R-squared         =     0.0125
+                                                Root MSE          =      7.943
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .1414599   .0347496     4.07   0.000     .0732703    .2096495
+       _cons |   68.20637   1.111002    61.39   0.000     66.02624     70.3865
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,049
+                                                F(2, 1012)        =     244.73
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3092
+                                                Root MSE          =     6.6451
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0529833   .0276354    -1.92   0.055    -.1072126     .001246
+     tipuach |  -.3388082   .0154558   -21.92   0.000    -.3691373   -.3084792
+       _cons |    78.7805   .9251684    85.15   0.000     76.96503    80.59597
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,049
+                                                F(3, 1012)        =     163.32
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3094
+                                                Root MSE          =     6.6457
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0404513   .0320309    -1.26   0.207    -.1033058    .0224032
+     tipuach |  -.3408198   .0157748   -21.61   0.000    -.3717748   -.3098648
+      c_size |  -.0039469   .0062395    -0.63   0.527    -.0161908    .0082969
+       _cons |   78.73795   .9223075    85.37   0.000     76.92809     80.5478
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,049
+                                                F(1, 1012)        =      32.17
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0253
+                                                Root MSE          =      8.658
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .2205578   .0388856     5.67   0.000     .1442522    .2968635
+       _cons |    62.1858    1.22263    50.86   0.000     59.78662    64.58498
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,049
+                                                F(2, 1012)        =     163.22
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2043
+                                                Root MSE          =     7.8246
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |    .054848    .035548     1.54   0.123    -.0149083    .1246043
+     tipuach |  -.2887417   .0166924   -17.30   0.000    -.3214974    -.255986
+       _cons |   71.19736   1.177203    60.48   0.000     68.88732     73.5074
+------------------------------------------------------------------------------
+
+Linear regression                               Number of obs     =      2,049
+                                                F(3, 1012)        =     110.32
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.2068
+                                                Root MSE          =     7.8146
+
+                           (Std. err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |   .0091049   .0396133     0.23   0.818    -.0686287    .0868385
+     tipuach |  -.2813993    .017091   -16.46   0.000     -.314937   -.2478615
+      c_size |   .0144067   .0071964     2.00   0.046     .0002851    .0285283
+       _cons |   71.35269   1.170054    60.98   0.000     69.05668     73.6487
+------------------------------------------------------------------------------
+
+. 
+. esttab t2_g5_avgverb_s1 t2_g5_avgverb_s2 t2_g5_avgverb_s3 ///
+>        t2_g5_avgmath_s1 t2_g5_avgmath_s2 t2_g5_avgmath_s3 ///
+>        t2_g4_avgverb_s1 t2_g4_avgverb_s2 t2_g4_avgverb_s3 ///
+>        t2_g4_avgmath_s1 t2_g4_avgmath_s2 t2_g4_avgmath_s3 ///
+>     using "$root/output/table2.tex", replace booktabs ///
+>     b(%7.3f) se(%7.3f) keep(classize tipuach c_size) ///
+>     coeflabels(classize "Class size" tipuach "Percent disadvantaged" c_size "Enrollment") ///
+>     stats(rmse r2 N, fmt(2 3 0) labels("Root MSE" "R-squared" "N")) ///
+>     mtitles("Reading" "Reading" "Reading" "Math" "Math" "Math" ///
+>             "Reading" "Reading" "Reading" "Math" "Math" "Math") ///
+>     addnotes("Columns 1-6 grade 5, columns 7-12 grade 4. Standard errors clustered by school.")
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table2.tex not found)
+(output written to C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table2.tex)
+
+. 
+. /*=========================================================================*/
+. *---Required addition: three standard errors for column (2)---*
+. * Column (2) is grade 5 reading on class size and percent disadvantaged, the
+. * paper's headline OLS result (p. 550: -.031 once PD is controlled for).
+. /*=========================================================================*/
+. 
+. * (i) conventional OLS: the same regression without clustering
+. reg avgverb classize tipuach if grade == 5
+
+      Source |       SS           df       MS      Number of obs   =     2,019
+-------------+----------------------------------   F(2, 2016)      =    584.56
+       Model |  43735.6271         2  21867.8135   Prob > F        =    0.0000
+    Residual |  75416.0605     2,016  37.4087602   R-squared       =    0.3671
+-------------+----------------------------------   Adj R-squared   =    0.3664
+       Total |  119151.688     2,018  59.0444438   Root MSE        =    6.1163
+
+------------------------------------------------------------------------------
+     avgverb | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0313879   .0222023    -1.41   0.158    -.0749299     .012154
+     tipuach |  -.3499026   .0107664   -32.50   0.000     -.371017   -.3287882
+       _cons |   80.26034   .7442497   107.84   0.000     78.80076    81.71992
+------------------------------------------------------------------------------
+
+. local b_cs   = _b[classize]
+
+. local se_i   = _se[classize]
+
+. local n_cl   = e(N)                                   // 2019 classes in the estimation sample
+
+. 
+. * rho: intraclass correlation of the regression residuals. Week 5 lecture (design effect
+. * appendix): rho = sigma_u^2 / (sigma_u^2 + sigma_e^2), the share of residual variance
+. * that is a school component shared by all classes in the school. loneway estimates the
+. * two components by one-way ANOVA of the residuals across schools and reports the ratio.
+. predict resid if e(sample), residuals                 // residuals of (i), estimation sample only
+(2,049 missing values generated)
+
+. loneway resid schlcode
+
+               One-way analysis of variance for resid: Residuals
+
+                                             Number of obs =        2,019
+                                                 R-squared =       0.7658
+
+    Source                SS         df      MS            F     Prob > F
+-------------------------------------------------------------------------
+Between schlcode       57750.225  1,001    57.692533      3.32     0.0000
+Within schlcode        17665.835  1,017    17.370536
+-------------------------------------------------------------------------
+Total                  75416.061  2,018    37.371685
+
+         Intraclass       Asy.        
+         correlation      S.E.       [95% conf. interval]
+         ------------------------------------------------
+            0.53537     0.02291       0.49046     0.58027
+
+         Estimated SD of schlcode effect         4.473802
+         Estimated SD within schlcode            4.167798
+         Est. reliability of a schlcode mean      0.69891
+              (evaluated at n=2.01)
+
+. local rho = r(rho)
+
+. 
+. * m: average number of classes per school in the estimation sample (the classes with a residual)
+. preserve
+
+. keep if !missing(resid)
+(2,049 observations deleted)
+
+. collapse (count) n_classes=classize, by(schlcode)     // one row per school, its number of classes
+
+. summarize n_classes                                   // mean = m; 1002 schools
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+   n_classes |      1,002     2.01497    .8660401          1          6
+
+. local m = r(mean)
+
+. restore
+
+. 
+. * (iii) the Week 5 lecture's design effect applied to (i): DEFF = 1 + (m - 1) rho.
+. * Residual-only version as required; the paper's Moulton SE also allows for the
+. * within-school correlation of the regressor, so (iii) is not expected to match it.
+. local deff   = 1 + (`m' - 1) * `rho'
+
+. local se_iii = `se_i' * sqrt(`deff')
+
+. 
+. * (ii) clustered by school, the Table II column itself
+. reg avgverb classize tipuach if grade == 5, vce(cluster schlcode)
+
+Linear regression                               Number of obs     =      2,019
+                                                F(2, 1001)        =     305.47
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3671
+                                                Root MSE          =     6.1163
+
+                           (Std. err. adjusted for 1,002 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+    classize |  -.0313879    .026177    -1.20   0.231     -.082756    .0199802
+     tipuach |  -.3499026   .0143569   -24.37   0.000    -.3780756   -.3217296
+       _cons |   80.26034   .8593444    93.40   0.000     78.57402    81.94667
+------------------------------------------------------------------------------
+
+. local se_ii = _se[classize]
+
+. 
+. * log check: b = -.031; (i) .022, the SE quoted in the paper's text (p. 550); (ii) .026; (iii) about .028
+. * (m = 2.015, rho about .54, so sqrt(DEFF) about 1.24)
+. display _n "Table II column (2), class size coefficient: " %7.3f `b_cs'
+
+Table II column (2), class size coefficient:  -0.031
+
+. display "(i)   conventional OLS s.e.:            " %7.4f `se_i'
+(i)   conventional OLS s.e.:             0.0222
+
+. display "(ii)  clustered by school s.e.:         " %7.4f `se_ii'
+(ii)  clustered by school s.e.:          0.0262
+
+. display "(iii) Moulton-inflated s.e.:            " %7.4f `se_iii'
+(iii) Moulton-inflated s.e.:             0.0276
+
+. display "      m = " %6.3f `m' "   rho = " %6.3f `rho' "   sqrt(DEFF) = " %6.3f sqrt(`deff')
+      m =  2.015   rho =  0.535   sqrt(DEFF) =  1.242
+
+. 
+. * export as a small table (numbers formatted the way the Week 4 lab does it)
+. local b_cs   : display %7.3f `b_cs'
+
+. local se_i   : display %7.4f `se_i'
+
+. local se_ii  : display %7.4f `se_ii'
+
+. local se_iii : display %7.4f `se_iii'
+
+. local m      : display %6.3f `m'
+
+. local rho    : display %6.3f `rho'
+
+. 
+. file open t2se using "$root/output/table2_se.tex", write replace
+(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table2_se.tex not found)
+
+. file write t2se "\begin{tabular}{lc}" _n
+
+. file write t2se "\toprule" _n
+
+. file write t2se "Table II, column (2): grade 5 reading on class size and percent disadvantaged & \\" _n
+
+. file write t2se "\midrule" _n
+
+. file write t2se "Class size coefficient & `=trim("`b_cs'")' \\" _n
+
+. file write t2se "(i) conventional OLS standard error & `=trim("`se_i'")' \\" _n
+
+. file write t2se "(ii) standard error clustered by school & `=trim("`se_ii'")' \\" _n
+
+. file write t2se "(iii) Moulton-inflated: (i) x sqrt(1 + (m - 1) rho) & `=trim("`se_iii'")' \\" _n
+
+. file write t2se "\midrule" _n
+
+. file write t2se "m, average classes per school & `=trim("`m'")' \\" _n
+
+. file write t2se "rho, intraclass correlation of residuals & `=trim("`rho'")' \\" _n
+
+. file write t2se "N & `n_cl' \\" _n
+
+. file write t2se "\bottomrule" _n
+
+. file write t2se "\end{tabular}" _n
+
+. file close t2se
+
+. 
+. /*=========================================================================*/
+. *closing up
+. /*=========================================================================*/
+. log close
+      name:  <unnamed>
+       log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/5_table2.log
+  log type:  text
+ closed on:   8 Sep 2026, 01:15:29
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
