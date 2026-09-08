@@ -2,17 +2,21 @@
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/2_table1.log
   log type:  text
- opened on:   8 Sep 2026, 01:15:24
+ opened on:   8 Sep 2026, 14:41:26
 
 . use "$root/output/al_clean.dta", clear
 
 . 
+. 
 . /*=========================================================================*/
-. *---rows of the table, in the paper's order, and their labels (Table I notes)---*
+. *---1. Rows of the table and their labels (Angrist, Table I, p 539)---*
+. * The seven rows in the paper's order. Reading size and math size are test takers per
+. * class, the two score rows are class averages (Table I variable definitions, p 539)
 . /*=========================================================================*/
-. local vars classize c_size tipuach verbsize mathsize avgverb avgmath
+. 
+. local vars classize c_size tipuach verbsize mathsize avgverb avgmath   // dictionary rows 25, 3, 52, 32, 29, 33, 30 (code: W1 lab section 11 locals)
 
-. local lab_classize "Class size"
+. local lab_classize "Class size"         // row labels as printed (p 539), nested macro `lab_`v'' below is OUR CHANGE
 
 . local lab_c_size   "Enrollment"
 
@@ -27,11 +31,17 @@
 . local lab_avgmath  "Average math"
 
 . 
+. 
 . /*=========================================================================*/
-. *---write the table---*
+. *---2. Write the table, panel A then panel B (Angrist, Table I, p 539)---*
+. * One LaTeX file written line by line, because the quantile columns do not fit an esttab
+. * layout (code: W4 lab Q7 file write table). Numbers to one decimal as printed
+. *
+. * Classes and schools per grade go in the panel header as in the paper. sch_first counts
+. * schools (1_clean.do section 3). Panel B keeps disc5 == 1 (1_clean.do section 5)
 . /*=========================================================================*/
-. file open t1 using "$root/output/table1.tex", write replace
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table1.tex not found)
+. 
+. file open t1 using "$root/output/table1.tex", write replace   // (code: W1 lab section 12, W4 lab Q7)
 
 . file write t1 "\begin{tabular}{lccccccc}" _n
 
@@ -39,32 +49,34 @@
 
 . file write t1 " & & & \multicolumn{5}{c}{Quantiles} \\" _n
 
-. file write t1 "Variable & Mean & S.D. & 0.10 & 0.25 & 0.50 & 0.75 & 0.90 \\" _n
+. file write t1 "Variable & Mean & S.D. & 0.10 & 0.25 & 0.50 & 0.75 & 0.90 \\" _n   // column heads as in Table I (p 539)
 
 . file write t1 "\midrule" _n
 
 . 
-. *---Panel A: full sample---*
+. *--- panel A: full sample, mean, s.d. and quantiles
 . file write t1 "\multicolumn{8}{l}{A. Full sample} \\" _n
 
-. foreach g in 5 4 {                                   // grade 5 first, as in the paper
+. foreach g in 5 4 {                                   // grade 5 first, as in the paper (code: W1 lab section 13 foreach)
   2.     count if grade == `g'
-  3.     local ncl = r(N)                                 // classes
+  3.     local ncl = r(N)                                 // classes (code: W5 lab Bonus 2 r(N) into a local)
   4.     count if grade == `g' & sch_first == 1
-  5.     local nsch = r(N)                                // schools (tag built in 1_clean.do)
-  6.     display _n "Panel A, grade `g': `ncl' classes, `nsch' schools"
+  5.     local nsch = r(N)                                // schools, one class per school tagged (1_clean.do section 3)
+  6.     display _n "Panel A, grade `g': `ncl' classes, `nsch' schools"   // 2,019 and 1,002 grade 5, 2,049 and 1,013 grade 4, matches paper (p 539; code: W2 lab Q2 display _n)
   7.     file write t1 "\multicolumn{8}{l}{`g'th grade (`ncl' classes, `nsch' schools, tested in 1991)} \\" _n
   8.     foreach v in `vars' {
-  9.         quietly summarize `v' if grade == `g', detail
- 10.         local m   : display %6.1f r(mean)
+  9.         quietly summarize `v' if grade == `g', detail   // detail gives the quantiles, missing avgmath skipped (code: W1 lab section 13; quietly W4 lab Q7)
+ 10.         local m   : display %6.1f r(mean)            // one decimal as printed (code: W4 lab Q7)
  11.         local sd  : display %6.1f r(sd)
- 12.         local p10 : display %6.1f r(p10)
+ 12.         local p10 : display %6.1f r(p10)             // r(p10) to r(p90) from summarize, detail (code: W5 lab Bonus 1)
  13.         local p25 : display %6.1f r(p25)
  14.         local p50 : display %6.1f r(p50)
  15.         local p75 : display %6.1f r(p75)
  16.         local p90 : display %6.1f r(p90)
- 17.         display "`lab_`v'': mean `m'  sd `sd'  p10 `p10'  p25 `p25'  p50 `p50'  p75 `p75'  p90 `p90'"
- 18.         file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & `=trim("`p10'")' & `=trim("`p25'")' & `=trim("`p50'")' & `=trim("`p75'")' & `=trim("`p90'")' \\" _n
+ 17.         display "`lab_`v'': mean `m'  sd `sd'  p10 `p10'  p25 `p25'  p50 `p50'  p75 `p75'  p90 `p90'"   // grade 5 class size 29.9 (6.5) with quantiles 21 26 31 35 38, enrollment 77.7, average verb
+> al 74.4, average math 67.3, then grade 4 30.3 (6.3), 78.3, 72.5, 68.9, matches paper (p 539)
+ 18.         file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & `=trim("`p10'")' & `=trim("`p25'")' & `=trim("`p50'")' & `=trim("`p75'")' & `=trim("`p90'")' \\" _n   // trim() drops the paddi
+> ng of %6.1f (code: W4 lab Q8)
  19.     }
  20. }
   2,019
@@ -91,23 +103,24 @@ Average verbal: mean   72.5  sd    8.0  p10   62.1  p25   67.7  p50   73.3  p75 
 Average math: mean   68.9  sd    8.8  p10   57.5  p25   63.6  p50   69.3  p75   75.0  p90   79.4
 
 . 
-. *---Panel B: +/-5 discontinuity sample (enrollment 36-45, 76-85, 116-125)---*
+. *--- panel B: +/-5 discontinuity sample, mean and s.d. only, as printed (p 539)
 . file write t1 "\midrule" _n
 
-. file write t1 "\multicolumn{8}{l}{B. +/-5 discontinuity sample (enrollment 36--45, 76--85, 116--125)} \\" _n
+. file write t1 "\multicolumn{8}{l}{B. +/-5 discontinuity sample (enrollment 36--45, 76--85, 116--125)} \\" _n   // 125 not the header's 124 (1_clean.do section 5)
 
 . foreach g in 5 4 {
   2.     count if grade == `g' & disc5 == 1
   3.     local ncl = r(N)
   4.     count if grade == `g' & disc5 == 1 & sch_first == 1
   5.     local nsch = r(N)
-  6.     display _n "Panel B, grade `g': `ncl' classes, `nsch' schools"
+  6.     display _n "Panel B, grade `g': `ncl' classes, `nsch' schools"   // 471 and 224 grade 5, 415 and 195 grade 4, matches paper (p 539)
   7.     file write t1 "\multicolumn{8}{l}{`g'th grade (`ncl' classes, `nsch' schools)} \\" _n
   8.     foreach v in `vars' {
   9.         quietly summarize `v' if grade == `g' & disc5 == 1
  10.         local m  : display %6.1f r(mean)
  11.         local sd : display %6.1f r(sd)
- 12.         display "`lab_`v'': mean `m'  sd `sd'"
+ 12.         display "`lab_`v'': mean `m'  sd `sd'"       // grade 5 class size 30.8 (7.4), enrollment 76.4, average verbal 74.5, average math 67.0, then grade 4 31.1 (7.2), 78.5, 72.5, 68.7, matches pa
+> per (p 539)
  13.         file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & & & & & \\" _n
  14.     }
  15. }
@@ -139,15 +152,16 @@ Average math: mean   68.7  sd    9.1
 
 . file write t1 "\end{tabular}" _n
 
-. file close t1
+. file close t1                                        // (code: W1 lab section 12)
 
 . 
+. 
 . /*=========================================================================*/
-. *closing up
+. *---Close---*
 . /*=========================================================================*/
-. log close
+. log close                               // close log
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/2_table1.log
   log type:  text
- closed on:   8 Sep 2026, 01:15:24
+ closed on:   8 Sep 2026, 14:41:26
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

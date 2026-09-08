@@ -2,34 +2,43 @@
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/4_figure2.log
   log type:  text
- opened on:   8 Sep 2026, 01:15:27
+ opened on:   8 Sep 2026, 14:41:29
 
 . use "$root/output/al_clean.dta", clear
 
 . 
+. 
 . /*=========================================================================*/
-. *---one panel per grade---*
+. *---1. One panel per grade (Angrist, Figure II, p 543)---*
+. * Keep one grade and enrollment up to 169 (see header), bin enrollment into intervals of ten,
+. * collapse to one row per interval, plot, then restore the full file for the next grade
+. * (code: W4 lab Q4c preserve, keep if, floor bin, collapse, restore)
 . /*=========================================================================*/
-. foreach g in 5 4 {
-  2.     preserve
-  3.     * the paper plots enrollment 5 to 165, i.e. the intervals up to [160,169];
-.     * larger schools (58 classes in grade 5, 48 in grade 4) are left out as in the paper
-.     keep if grade == `g' & c_size <= 169
-  4. 
-.     * "enrollment intervals of ten" (p. 543), plotted at the midpoint 5, 15, ..., 165
-.     gen e_bin = 10 * floor(c_size / 10) + 5
-  5. 
-.     collapse (mean) avgverb fsc (count) n=avgverb, by(e_bin)
-  6.     list e_bin n avgverb fsc                    // log check: the first interval holds only 3-4 classes,
-  7.                                                 // kept so the x-axis matches the paper's (5 to 165)
-.     twoway (connected avgverb e_bin) ///
->            (connected fsc e_bin, yaxis(2) lpattern(dash)), ///
->         legend(label(1 "Average reading score") label(2 "Predicted class size (right axis)")) ///
->         title("Grade `g'") xtitle("Enrollment count") ///
->         ytitle("Average reading score") ytitle("Predicted class size", axis(2)) ///
->         xlabel(5(20)165)
-  8.     graph export "$root/output/figure2_grade`g'.png", replace
-  9.     restore
+. 
+. tab grade if c_size > 169                           // 53 grade 5, 40 grade 4 left out of the figure, the paper pools 160 to 190 into its last point (fn 12, p 544; code: W1 lab section 8 tab if)
+
+class grade |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          4 |         40       43.01       43.01
+          5 |         53       56.99      100.00
+------------+-----------------------------------
+      Total |         93      100.00
+
+. 
+. foreach g in 5 4 {                                  // panel a grade 5, panel b grade 4 (p 543; code: W1 lab section 13 foreach)
+  2.     preserve                                        // (code: W4 lab Q4c)
+  3.     keep if grade == `g' & c_size <= 169            // intervals up to [160,169], see header (fn 12, p 544; code: W1 lab section 8 conditions)
+  4.     gen e_bin = 10 * floor(c_size / 10) + 5         // interval midpoint 5, 15, ..., 165 (fn 12, p 544; code: W4 lab Q4c floor bin)
+  5.     collapse (mean) avgverb fsc (count) n=avgverb, by(e_bin)   // averages by interval and the classes in each (p 543; code: W4 lab Q4c collapse mean count)
+  6.     list e_bin n avgverb fsc                        // 17 rows, 5 to 165, first interval 4 classes grade 5 and 3 grade 4, kept so the axis matches the paper's (p 543; code: W1 lab section 6 list)
+  7.     twoway (connected avgverb e_bin) ///            // scores, left axis (code: W4 lab Q11 connected)
+>            (connected fsc e_bin, yaxis(2) lpattern(dash)), ///   // fsc dashed on the right axis, as the paper (p 543; code: W4 lab Q11 yaxis(2), W4 lab Q4a lpattern(dash))
+>         legend(label(1 "Average reading score") label(2 "Predicted class size (right axis)")) ///   // (code: W1 lab section 10)
+>         title("Grade `g'") xtitle("Enrollment count") ///   // (code: W4 lab Q4a)
+>         ytitle("Average reading score") ytitle("Predicted class size", axis(2)) ///   // (code: W4 lab Q11 ytitle axis(2))
+>         xlabel(5(20)165)                            // midpoints 5 to 165 as the paper's axis (fn 12, p 544), the numlist form is OUR CHANGE
+  8.     graph export "$root/output/figure2_grade`g'.png", replace   // (code: W1 lab section 10)
+  9.     restore                                         // (code: W4 lab Q4c)
  10. }
 (2,102 observations deleted)
 
@@ -57,7 +66,6 @@
  16. |   155    43   79.46115   38.56977 |
  17. |   165    13   78.16241   37.38462 |
      +-----------------------------------+
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade5.png not found)
 file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade5.png saved as PNG format
 (2,059 observations deleted)
 
@@ -85,16 +93,16 @@ file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade5.png
  16. |   155    40   74.95831     38.675 |
  17. |   165    12   69.38292   35.73333 |
      +-----------------------------------+
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade4.png not found)
 file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure2_grade4.png saved as PNG format
 
 . 
+. 
 . /*=========================================================================*/
-. *closing up
+. *---Close---*
 . /*=========================================================================*/
-. log close
+. log close                               // close log
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/4_figure2.log
   log type:  text
- closed on:   8 Sep 2026, 01:15:28
+ closed on:   8 Sep 2026, 14:41:31
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

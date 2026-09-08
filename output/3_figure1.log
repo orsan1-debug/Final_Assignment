@@ -2,27 +2,31 @@
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/3_figure1.log
   log type:  text
- opened on:   8 Sep 2026, 01:15:24
+ opened on:   8 Sep 2026, 14:41:26
 
 . use "$root/output/al_clean.dta", clear
 
 . 
+. 
 . /*=========================================================================*/
-. *---one panel per grade---*
+. *---1. One panel per grade (Angrist, Figure I, p 541)---*
+. * Collapse to one row per enrollment count inside preserve/restore, so the full file is
+. * back for the next grade (code: W4 lab Q4c). fsc is the same for every class with that
+. * enrollment (Angrist, eq 1, p 540), so its mean is fsc itself
 . /*=========================================================================*/
-. foreach g in 5 4 {
-  2.     preserve
-  3.     keep if grade == `g'
-  4.     collapse (mean) classize fsc, by(c_size)    // mean actual class size at each enrollment count;
-  5.                                                 // fsc is a function of c_size, so its mean is fsc itself
-.     summarize classize fsc c_size               // log check: fsc peaks at 40, actual peaks a little above
-  6.     twoway (line fsc c_size, lpattern(dash)) ///
->            (line classize c_size), ///
->         legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///
->         title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///
->         xlabel(0(20)220) ylabel(5(5)40)
-  7.     graph export "$root/output/figure1_grade`g'.png", replace
-  8.     restore                                     // back to the full two-grade file for the next panel
+. 
+. foreach g in 5 4 {                                  // panel a grade 5, panel b grade 4, the paper's order (p 541; code: W1 lab section 13 foreach)
+  2.     preserve                                        // (code: W4 lab Q4c)
+  3.     keep if grade == `g'                            // (code: W1 lab section 5 keep if)
+  4.     collapse (mean) classize fsc, by(c_size)        // mean actual class size at each enrollment count (p 541; code: W3 lab Q3 collapse mean by)
+  5.     summarize classize fsc c_size                   // fsc max 40 by construction (eq 1, p 540), mean actual size tops out at 40.0 grade 5 and 40.3 grade 4, a few classes exceed 40 (p 542)
+  6.     twoway (line fsc c_size, lpattern(dash)) ///    // rule dashed, as the paper's legend (p 541; code: W3 lab Q4 twoway line, W4 lab Q4a lpattern(dash))
+>            (line classize c_size), ///              // actual solid
+>         legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///   // (code: W1 lab section 10)
+>         title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///   // axis titles as printed (p 541; code: W4 lab Q4a)
+>         xlabel(0(20)220) ylabel(5(5)40)             // the paper's axes (p 541), the numlist form is OUR CHANGE
+  7.     graph export "$root/output/figure1_grade`g'.png", replace   // (code: W1 lab section 10)
+  8.     restore                                         // back to the full two-grade file for the next panel (code: W4 lab Q4c)
   9. }
 (2,049 observations deleted)
 
@@ -31,7 +35,6 @@
     classize |        153    30.15331    6.551193          8         40
          fsc |        153    31.00599    7.145539          8         40
       c_size |        153    87.63399    50.48433          8        226
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade5.png not found)
 file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade5.png saved as PNG format
 (2,019 observations deleted)
 
@@ -40,16 +43,16 @@ file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade5.png
     classize |        150    30.37073    6.380766          8   40.33333
          fsc |        150    31.01667    6.948234          8         40
       c_size |        150       85.96    48.18503          8        225
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade4.png not found)
 file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/figure1_grade4.png saved as PNG format
 
 . 
+. 
 . /*=========================================================================*/
-. *closing up
+. *---Close---*
 . /*=========================================================================*/
-. log close
+. log close                               // close log
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/3_figure1.log
   log type:  text
- closed on:   8 Sep 2026, 01:15:27
+ closed on:   8 Sep 2026, 14:41:29
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

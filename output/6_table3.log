@@ -2,29 +2,40 @@
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/6_table3.log
   log type:  text
- opened on:   8 Sep 2026, 01:15:29
+ opened on:   8 Sep 2026, 14:41:31
 
 . use "$root/output/al_clean.dta", clear
 
 . 
+. 
 . /*=========================================================================*/
-. *---the regressions: two panels x two grades x three outcomes x two specifications---*
+. *---1. Sample marker and specifications (Angrist, Table III, p 553)---*
+. * full is 1 for every class, so the two panels run through one loop over `smp' == 1 with
+. * disc5 as the second marker (1_clean.do section 5). Spec locals give the two columns
 . /*=========================================================================*/
-. gen full = 1                                            // marker for the full sample, so the two
+. 
+. gen full = 1                            // full-sample marker, looping over sample names is OUR CHANGE (code: W1 lab section 8 generate)
 
-.                                                         // panels run through one loop: `smp' == 1
-. local spec1 fsc tipuach
+. local spec1 fsc tipuach                 // column (1), fsc and PD (p 553; code: W1 lab section 11 locals)
 
-. local spec2 fsc tipuach c_size
+. local spec2 fsc tipuach c_size          // column (2) adds September enrollment (dictionary row 3)
 
 . 
-. foreach smp in full disc5 {
-  2.     foreach g in 5 4 {
-  3.         summarize classize avgverb avgmath if grade == `g' & `smp' == 1   // "Means (s.d.)" rows (log only)
-  4.         foreach y in classize avgverb avgmath {
-  5.             forvalues s = 1/2 {
-  6.                 reg `y' `spec`s'' if grade == `g' & `smp' == 1, vce(cluster schlcode)
-  7.                 estimates store t3_`smp'_g`g'_`y'_s`s'
+. 
+. /*=========================================================================*/
+. *---2. The regressions, two panels (Angrist, Table III, p 553)---*
+. * Panel A is the full sample, panel B keeps disc5 == 1. reg drops the one grade 5 class
+. * without a math score, so math N is 2,018 (p 553; 1_clean.do section 2)
+. /*=========================================================================*/
+. 
+. foreach smp in full disc5 {                         // panel A then panel B (code: W1 lab section 13 foreach)
+  2.     foreach g in 5 4 {                              // grade 5 first, as in the paper
+  3.         summarize classize avgverb avgmath if grade == `g' & `smp' == 1   // means rows, 29.9 74.4 67.3 and 30.3 72.5 68.9 full sample, 30.8 74.5 67.0 and 31.1 72.5 68.7 +/-5 sample, matches paper 
+> (p 553)
+  4.         foreach y in classize avgverb avgmath {     // class size, reading, math
+  5.             forvalues s = 1/2 {                     // (code: W1 lab section 13 forvalues)
+  6.                 reg `y' `spec`s'' if grade == `g' & `smp' == 1, vce(cluster schlcode)   // clustered by school, nested `spec`s'' is OUR CHANGE (code: W5 lab Q2 vce(cluster))
+  7.                 estimates store t3_`smp'_g`g'_`y'_s`s'   // one name per panel and column (code: W5 lab Q2)
   8.             }
   9.         }
  10.     }
@@ -451,39 +462,43 @@ Linear regression                               Number of obs     =        415
 ------------------------------------------------------------------------------
 
 . 
+. 
 . /*=========================================================================*/
-. *---export: one table per panel---*
+. *---3. Export, one table per panel, and checks (Angrist, Table III, p 553)---*
 . /*=========================================================================*/
-. foreach smp in full disc5 {
-  2.     esttab t3_`smp'_g5_classize_s1 t3_`smp'_g5_classize_s2 ///
+. 
+. foreach smp in full disc5 {                         // (code: W1 lab section 13 foreach)
+  2.     esttab t3_`smp'_g5_classize_s1 t3_`smp'_g5_classize_s2 ///   // columns in the paper's order (p 553; code: W2 lab Q12 esttab using)
 >            t3_`smp'_g5_avgverb_s1  t3_`smp'_g5_avgverb_s2  ///
 >            t3_`smp'_g5_avgmath_s1  t3_`smp'_g5_avgmath_s2  ///
 >            t3_`smp'_g4_classize_s1 t3_`smp'_g4_classize_s2 ///
 >            t3_`smp'_g4_avgverb_s1  t3_`smp'_g4_avgverb_s2  ///
 >            t3_`smp'_g4_avgmath_s1  t3_`smp'_g4_avgmath_s2  ///
->         using "$root/output/table3_`smp'.tex", replace booktabs ///
->         b(%7.3f) se(%7.3f) keep(fsc tipuach c_size) ///
->         coeflabels(fsc "fsc" tipuach "Percent disadvantaged" c_size "Enrollment") ///
->         stats(rmse r2 N, fmt(2 3 0) labels("Root MSE" "R-squared" "N")) ///
->         mtitles("Class size" "Class size" "Reading" "Reading" "Math" "Math" ///
+>         using "$root/output/table3_`smp'.tex", replace booktabs ///   // one file per panel
+>         b(%7.3f) se(%7.3f) keep(fsc tipuach c_size) ///   // three decimals as printed (code: W2 lab Q12 b() se(), W4 lab Q1 keep())
+>         coeflabels(fsc "fsc" tipuach "Percent disadvantaged" c_size "Enrollment") ///   // row names as printed (code: W3 lab Q6 coeflabels)
+>         stats(rmse r2 N, fmt(2 3 0) labels("Root MSE" "R-squared" "N")) ///   // the table's bottom rows (p 553; code: W3 lab Q6 stats labels), rmse as an esttab stat is OUR CHANGE
+>         mtitles("Class size" "Class size" "Reading" "Reading" "Math" "Math" ///   // (code: W3 lab Q6 mtitles)
 >                 "Class size" "Class size" "Reading" "Reading" "Math" "Math") ///
->         addnotes("Columns 1-6 grade 5, columns 7-12 grade 4. Standard errors clustered by school." ///
->                  "fsc = enrollment / [int((enrollment - 1)/40) + 1].")
+>         addnotes("Columns 1-6 grade 5, columns 7-12 grade 4. Standard errors clustered by school." ///   // (code: W4 lab Q1 addnotes)
+>                  "fsc = enrollment / [int((enrollment - 1)/40) + 1].")   // the table's own note (p 553)
   3. }
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table3_full.tex not found)
 (output written to C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table3_full.tex)
-(file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table3_disc5.tex not found)
 (output written to C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/table3_disc5.tex)
 
-. * log check, fsc on class size, full sample: .704 and .542 (grade 5), .772 and .670 (grade 4);
-. * discontinuity sample: .481 and .346, .625 and .503 (paper p. 553)
+. 
+. *--- verification vs Angrist, Table III, p 553 (the regressions above are in the log)
+. * fsc on class size, full sample .704 .542 grade 5 and .772 .670 grade 4, +/-5 sample .481 .346 and .625 .503, matches paper
+. * reading and math columns match to three decimals except two grade 5 full-sample cells off by .001 (-.150 here, paper -.149, and -.125 here, paper -.124)
+. * N 2,019 2,019 2,018 grade 5 and 2,049 grade 4 in panel A, 471 and 415 in panel B, matches paper
+. 
 . 
 . /*=========================================================================*/
-. *closing up
+. *---Close---*
 . /*=========================================================================*/
-. log close
+. log close                               // close log
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/6_table3.log
   log type:  text
- closed on:   8 Sep 2026, 01:15:29
+ closed on:   8 Sep 2026, 14:41:32
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

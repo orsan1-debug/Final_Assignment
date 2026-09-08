@@ -24,7 +24,7 @@
 *                    
 clear all
 set more off                            // lets file run w/o manual input when output is long
-global root "C:/Users/otisr/Documents/ECX5479/Final_Assignment"  // !!TEMP, DELETE BEFORE SUBMISSION: master sets this!!
+if "$root" == "" global root "C:/Users/otisr/Documents/ECX5479/Final_Assignment"   // fallback when run alone, 0_master.do sets it for the full run (OUR CHANGE)
 capture log close                       // closes a log if crash run left open
 log using "$root/output/1_clean.log", replace text   // $root set once in 0_master.do, edit the path there
 

@@ -1,8 +1,8 @@
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/1_clean.log
   log type:  text
- opened on:   8 Sep 2026, 12:44:11
+ opened on:   8 Sep 2026, 14:41:26
 
 . 
 . /*=========================================================================*/
@@ -21,10 +21,10 @@
 Contains data from C:/Users/otisr/Documents/ECX5479/Final_Assignment/data/final4.dta
  Observations:         4,088                  
     Variables:            58                  
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Variable      Storage   Display    Value
     name         type    format    label      Variable label
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 schlcode        long    %12.0g                school code
 c_size          int     %8.0g                 
 c_boys          int     %8.0g                 
@@ -83,7 +83,7 @@ ngrm5           int     %8.0g                 nr of pupils grammer fifth class i
 flmth5          float   %9.0g                 % failer in math second class in 91
 mrkmth5         byte    %8.0g                 mean mark in math second class in 90
 nmth5           int     %8.0g                 nr of pupils in math second class in 91
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Sorted by: 
      Note: Dataset has changed since last saved.
 
@@ -263,8 +263,7 @@ class grade |      Freq.     Percent        Cum.
 . 
 . 
 . *--- NEW VARIABLE sch_first: one class per school gets a 1, so summing it counts schools as Table I does (Angrist, Table I, p 539)
-. bysort grade schlcode: gen sch_first = (_n == 1)   // _n = row number within school, 1 for the first class (code: W1 lab section 7 + W4 
-> lab Q4)
+. bysort grade schlcode: gen sch_first = (_n == 1)   // _n = row number within school, 1 for the first class (code: W1 lab section 7 + W4 lab Q4)
 
 . label variable sch_first "1 for one class per school-grade"   // (W4 lab section 0)
 
@@ -291,8 +290,7 @@ class grade |      Freq.     Percent        Cum.
 . count if grade == 5 & !missing(avgverb) // classes with a reading score: 2,019, matches paper (Angrist, Table II, p 551)
   2,019
 
-. count if grade == 5 & !missing(avgmath) // classes with a math score: 2,018, matches paper; one below reading, the untested class from s
-> ection 2
+. count if grade == 5 & !missing(avgmath) // classes with a math score: 2,018, matches paper; one below reading, the untested class from section 2
   2,018
 
 . 
@@ -418,10 +416,10 @@ class grade |      Freq.     Percent        Cum.
 Contains data from C:/Users/otisr/Documents/ECX5479/Final_Assignment/data/final4.dta
  Observations:         4,068                  
     Variables:            65                  
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Variable      Storage   Display    Value
     name         type    format    label      Variable label
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 schlcode        long    %12.0g                school code
 c_size          int     %8.0g                 
 c_boys          int     %8.0g                 
@@ -487,7 +485,7 @@ seg2            float   %9.0g
 seg3            float   %9.0g                 
 disc5           float   %9.0g                 +/-5 discontinuity sample
 disc3           float   %9.0g                 +/-3 discontinuity sample
-------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Sorted by: grade  schlcode
      Note: Dataset has changed since last saved.
 
@@ -498,5 +496,5 @@ file C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/al_clean.dta saved
       name:  <unnamed>
        log:  C:/Users/otisr/Documents/ECX5479/Final_Assignment/output/1_clean.log
   log type:  text
- closed on:   8 Sep 2026, 12:44:11
-------------------------------------------------------------------------------------------------------------------------------------------
+ closed on:   8 Sep 2026, 14:41:26
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
