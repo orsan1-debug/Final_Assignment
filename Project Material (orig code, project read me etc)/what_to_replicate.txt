@@ -1,0 +1,51 @@
+Angrist & Lavy (1999), "Using Maimonides' Rule to Estimate the Effect
+of Class Size on Scholastic Achievement" (QJE 114-2)
+WHAT TO REPLICATE
+=============================
+
+All work starts from data/final4.dta (fourth grade) and
+data/final5.dta (fifth grade).
+
+REQUIRED
+1. Table I    - fourth- and fifth-grade columns only
+                (final4.dta, final5.dta).
+2. Figure I   - both grades (final4.dta, final5.dta).
+3. Figure II  - both grades (final4.dta, final5.dta).
+4. Table II   - (final4.dta, final5.dta).
+5. Table III  - (final4.dta, final5.dta).
+6. Table IV   - (final5.dta).
+7. Table V    - (final4.dta).
+8. Table VI   - (final5.dta, final4.dta). The +5/-5 and +3/-3
+                discontinuity-sample estimates. Note that these models
+                use binary instruments (the z_jsc dummies defined on
+                paper p. 559) and control for enrollment only through
+                the two segment dummies, so each estimate is built from
+                simple comparisons of means.
+
+ALLOWED SIMPLIFICATIONS
+- Moulton-corrected standard errors may be replaced by standard
+  errors clustered at the school level, EXCEPT in the one comparison
+  required immediately below.
+
+REQUIRED SMALL ADDITION - standard errors
+- For one column of Table II (state which), report three standard
+  errors for the class-size coefficient side by side:
+    (i)   conventional OLS standard errors;
+    (ii)  standard errors clustered at the school level;
+    (iii) the Moulton-corrected standard error, obtained by inflating
+          (i) by sqrt(1 + (m-1)*rho), where m is the average number of
+          classes per school in your estimation sample and rho is the
+          intraclass (within-school) correlation of the regression
+          residuals.
+  This is the correction covered in Module 5. Your figure for (iii)
+  will not equal the paper's Moulton standard error, which also
+  accounts for within-school correlation in the regressor; that is
+  expected and is not an error.
+
+OPTIONAL
+- Table VII; Figures III-IV.
+
+NOT REQUIRED
+- Table VIII, the third-grade columns of Table I and Appendix 1, and
+  the third-grade panels of the figures: the third-grade data file is
+  not provided.
