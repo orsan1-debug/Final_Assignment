@@ -1,0 +1,702 @@
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/tyan0083/Documents/Codex-Restored-Projects/final project/
+> A_existing_work/output/tables5_6/table5.log
+  log type:  text
+ opened on:  28 Sep 2026, 20:40:04
+
+. use "$root/output/al_clean.dta", clear
+
+. keep if grade == 4
+(2,019 observations deleted)
+
+. isid schlcode classid
+
+. assert !missing(c_size, classize, schlcode, fsc)
+
+. assert abs(fsc - c_size/(floor((c_size-1)/40)+1)) < 0.00001
+
+. assert disc5 == (inrange(c_size,36,45) | inrange(c_size,76,85) | inrange(c_si
+> ze,116,125))
+
+. 
+. gen double c_size2 = c_size^2/100
+
+. * Continuous piecewise trend: slopes match fsc between cutoffs.
+. * Only defined through 160; larger cohorts leave this specification.
+. gen double trend = c_size if c_size <= 40
+(1,755 missing values generated)
+
+. replace trend = 20 + c_size/2 if inrange(c_size,41,80)
+(868 real changes made)
+
+. replace trend = 100/3 + c_size/3 if inrange(c_size,81,120)
+(638 real changes made)
+
+. replace trend = 130/3 + c_size/4 if inrange(c_size,121,160)
+(201 real changes made)
+
+. gen byte full = 1
+
+. 
+. local ctrl1 tipuach
+
+. local ctrl2 tipuach c_size
+
+. local ctrl3 tipuach c_size c_size2
+
+. local ctrl4 trend
+
+. local ctrl5 tipuach
+
+. local ctrl6 tipuach c_size
+
+. * Specification 4 intentionally omits PD, as in the published table.
+. local sample1 full
+
+. local sample2 full
+
+. local sample3 full
+
+. local sample4 full
+
+. local sample5 disc5
+
+. local sample6 disc5
+
+. 
+. tempname results
+
+. tempfile records
+
+. postfile `results' int order str32 row byte column double value using "`recor
+> ds'", replace
+(note: file C:\Users\tyan0083\AppData\Local\Temp\ST_51d0_000001.tmp not found)
+
+. local column = 0
+
+. local models
+
+. foreach y in avgverb avgmath {
+  2.     forvalues s = 1/6 {
+  3.         local ++column
+  4.         display "Table V column `column': `y', specification `s'"
+  5.         ivregress 2sls `y' `ctrl`s'' (classize = fsc) ///
+>             if `sample`s'' == 1, vce(cluster schlcode)
+  6.         estimates store T5_`column'
+  7.         local models `models' T5_`column'
+  8.         record_table_result `results' `column' `y' "classize tipuach c_siz
+> e c_size2 trend"
+  9.         gen byte estimation_sample = e(sample)
+ 10. 
+.         * First stage on exactly the same observations and controls as 2SLS.
+.         * This clustered F tests the excluded instrument, not all regressors.
+.         regress classize fsc `ctrl`s'' if estimation_sample, vce(cluster schl
+> code)
+ 11.         test fsc
+ 12.         post `results' (94) ("first_stage_F") (`column') (r(F))
+ 13.         post `results' (95) ("first_stage_p") (`column') (r(p))
+ 14.         drop estimation_sample
+ 15.     }
+ 16. }
+Table V column 1: avgverb, specification 1
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,049
+                                                  Wald chi2(2)    =     491.77
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3073
+                                                  Root MSE        =     6.6493
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.110      0.040    -2.72   0.006       -0.189      -0.031
+     tipuach |     -0.346      0.016   -21.80   0.000       -0.377      -0.315
+       _cons |     80.609      1.302    61.91   0.000       78.057      83.161
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach fsc
+
+Linear regression                               Number of obs     =      2,049
+                                                F(2, 1012)        =     849.24
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5607
+                                                Root MSE          =     4.1954
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.772      0.023    34.29   0.000        0.727       0.816
+     tipuach |     -0.054      0.009    -5.74   0.000       -0.072      -0.035
+       _cons |      7.035      0.715     9.84   0.000        5.633       8.438
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1012) = 1175.58
+            Prob > F =    0.0000
+Table V column 2: avgverb, specification 2
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,049
+                                                  Wald chi2(3)    =     491.28
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3059
+                                                  Root MSE        =      6.656
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.133      0.061    -2.18   0.029       -0.252      -0.014
+     tipuach |     -0.345      0.016   -21.68   0.000       -0.376      -0.314
+      c_size |      0.005      0.008     0.58   0.562       -0.011       0.020
+       _cons |     80.922      1.493    54.19   0.000       77.996      83.849
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach c_size fsc
+
+Linear regression                               Number of obs     =      2,049
+                                                F(3, 1012)        =     635.37
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5747
+                                                Root MSE          =      4.129
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.670      0.033    20.38   0.000        0.605       0.734
+     tipuach |     -0.039      0.009    -4.28   0.000       -0.057      -0.021
+      c_size |      0.027      0.005     5.04   0.000        0.016       0.037
+       _cons |      7.915      0.757    10.45   0.000        6.429       9.401
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1012) =  415.53
+            Prob > F =    0.0000
+Table V column 3: avgverb, specification 3
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,049
+                                                  Wald chi2(4)    =     502.67
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.3120
+                                                  Root MSE        =     6.6267
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.074      0.068    -1.08   0.279       -0.208       0.060
+     tipuach |     -0.346      0.016   -21.82   0.000       -0.378      -0.315
+      c_size |     -0.040      0.022    -1.82   0.068       -0.082       0.003
+     c_size2 |      0.021      0.009     2.22   0.026        0.002       0.040
+       _cons |     81.036      1.475    54.94   0.000       78.146      83.927
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach c_size c_size2 fsc
+
+Linear regression                               Number of obs     =      2,049
+                                                F(4, 1012)        =     570.35
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5778
+                                                Root MSE          =     4.1149
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.636      0.037    17.17   0.000        0.563       0.708
+     tipuach |     -0.036      0.009    -3.93   0.000       -0.054      -0.018
+      c_size |      0.064      0.014     4.67   0.000        0.037       0.090
+     c_size2 |     -0.018      0.006    -3.04   0.002       -0.030      -0.006
+       _cons |      7.411      0.711    10.43   0.000        6.016       8.805
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1012) =  294.81
+            Prob > F =    0.0000
+Table V column 4: avgverb, specification 4
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,001
+                                                  Wald chi2(2)    =      22.75
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.0021
+                                                  Root MSE        =     8.0108
+
+                           (Std. Err. adjusted for 1,003 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.147      0.089    -1.66   0.097       -0.321       0.027
+       trend |      0.100      0.026     3.84   0.000        0.049       0.151
+       _cons |     71.393      1.716    41.59   0.000       68.029      74.757
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   trend fsc
+
+Linear regression                               Number of obs     =      2,001
+                                                F(2, 1002)        =    1076.18
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5762
+                                                Root MSE          =     4.1061
+
+                           (Std. Err. adjusted for 1,003 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.630      0.037    16.82   0.000        0.557       0.704
+       trend |      0.086      0.013     6.76   0.000        0.061       0.111
+       _cons |      5.949      0.604     9.85   0.000        4.764       7.134
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1002) =  283.05
+            Prob > F =    0.0000
+Table V column 5: avgverb, specification 5
+
+Instrumental variables (2SLS) regression          Number of obs   =        415
+                                                  Wald chi2(2)    =      98.87
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2842
+                                                  Root MSE        =     6.6178
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.098      0.095    -1.03   0.302       -0.284       0.088
+     tipuach |     -0.354      0.036    -9.91   0.000       -0.425      -0.284
+       _cons |     80.079      3.085    25.96   0.000       74.033      86.125
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach fsc
+
+Linear regression                               Number of obs     =        415
+                                                F(2, 194)         =     101.23
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.4278
+                                                Root MSE          =     5.4852
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.625      0.048    12.90   0.000        0.530       0.721
+     tipuach |     -0.068      0.029    -2.35   0.020       -0.126      -0.011
+       _cons |     11.816      1.627     7.26   0.000        8.607      15.025
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,   194) =  166.42
+            Prob > F =    0.0000
+Table V column 6: avgverb, specification 6
+
+Instrumental variables (2SLS) regression          Number of obs   =        415
+                                                  Wald chi2(3)    =     102.42
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2755
+                                                  Root MSE        =      6.658
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgverb |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.150      0.131    -1.14   0.253       -0.407       0.107
+     tipuach |     -0.347      0.038    -9.26   0.000       -0.421      -0.274
+      c_size |      0.017      0.022     0.77   0.441       -0.026       0.060
+       _cons |     80.293      3.182    25.23   0.000       74.056      86.529
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach c_size fsc
+
+Linear regression                               Number of obs     =        415
+                                                F(3, 194)         =      91.39
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.4750
+                                                Root MSE          =     5.2606
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.503      0.061     8.22   0.000        0.382       0.623
+     tipuach |     -0.029      0.027    -1.07   0.287       -0.082       0.024
+      c_size |      0.063      0.016     3.99   0.000        0.032       0.094
+       _cons |     10.306      1.402     7.35   0.000        7.542      13.070
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,   194) =   67.57
+            Prob > F =    0.0000
+Table V column 7: avgmath, specification 1
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,049
+                                                  Wald chi2(2)    =     327.22
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2043
+                                                  Root MSE        =     7.8189
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |      0.049      0.052     0.94   0.349       -0.053       0.151
+     tipuach |     -0.290      0.018   -16.47   0.000       -0.324      -0.255
+       _cons |     71.393      1.689    42.26   0.000       68.082      74.705
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach fsc
+
+Linear regression                               Number of obs     =      2,049
+                                                F(2, 1012)        =     849.24
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5607
+                                                Root MSE          =     4.1954
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.772      0.023    34.29   0.000        0.727       0.816
+     tipuach |     -0.054      0.009    -5.74   0.000       -0.072      -0.035
+       _cons |      7.035      0.715     9.84   0.000        5.633       8.438
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1012) = 1175.58
+            Prob > F =    0.0000
+Table V column 8: avgmath, specification 2
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,049
+                                                  Wald chi2(3)    =     330.68
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2056
+                                                  Root MSE        =     7.8127
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.050      0.075    -0.67   0.506       -0.196       0.097
+     tipuach |     -0.284      0.017   -16.25   0.000       -0.318      -0.250
+      c_size |      0.020      0.009     2.14   0.032        0.002       0.038
+       _cons |     72.743      1.904    38.21   0.000       69.012      76.473
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach c_size fsc
+
+Linear regression                               Number of obs     =      2,049
+                                                F(3, 1012)        =     635.37
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5747
+                                                Root MSE          =      4.129
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.670      0.033    20.38   0.000        0.605       0.734
+     tipuach |     -0.039      0.009    -4.28   0.000       -0.057      -0.021
+      c_size |      0.027      0.005     5.04   0.000        0.016       0.037
+       _cons |      7.915      0.757    10.45   0.000        6.429       9.401
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1012) =  415.53
+            Prob > F =    0.0000
+Table V column 9: avgmath, specification 3
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,049
+                                                  Wald chi2(4)    =     334.05
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.2064
+                                                  Root MSE        =     7.8089
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.033      0.084    -0.39   0.698       -0.198       0.133
+     tipuach |     -0.284      0.017   -16.35   0.000       -0.319      -0.250
+      c_size |      0.007      0.027     0.26   0.793       -0.046       0.061
+     c_size2 |      0.006      0.012     0.49   0.626       -0.018       0.030
+       _cons |     72.775      1.894    38.42   0.000       69.063      76.488
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach c_size c_size2 fsc
+
+Linear regression                               Number of obs     =      2,049
+                                                F(4, 1012)        =     570.35
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5778
+                                                Root MSE          =     4.1149
+
+                           (Std. Err. adjusted for 1,013 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.636      0.037    17.17   0.000        0.563       0.708
+     tipuach |     -0.036      0.009    -3.93   0.000       -0.054      -0.018
+      c_size |      0.064      0.014     4.67   0.000        0.037       0.090
+     c_size2 |     -0.018      0.006    -3.04   0.002       -0.030      -0.006
+       _cons |      7.411      0.711    10.43   0.000        6.016       8.805
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1012) =  294.81
+            Prob > F =    0.0000
+Table V column 10: avgmath, specification 4
+
+Instrumental variables (2SLS) regression          Number of obs   =      2,001
+                                                  Wald chi2(2)    =      46.28
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.0302
+                                                  Root MSE        =     8.6426
+
+                           (Std. Err. adjusted for 1,003 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |     -0.098      0.099    -0.99   0.321       -0.292       0.096
+       trend |      0.130      0.029     4.49   0.000        0.073       0.187
+       _cons |     64.624      1.894    34.12   0.000       60.912      68.336
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   trend fsc
+
+Linear regression                               Number of obs     =      2,001
+                                                F(2, 1002)        =    1076.18
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5762
+                                                Root MSE          =     4.1061
+
+                           (Std. Err. adjusted for 1,003 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.630      0.037    16.82   0.000        0.557       0.704
+       trend |      0.086      0.013     6.76   0.000        0.061       0.111
+       _cons |      5.949      0.604     9.85   0.000        4.764       7.134
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,  1002) =  283.05
+            Prob > F =    0.0000
+Table V column 11: avgmath, specification 5
+
+Instrumental variables (2SLS) regression          Number of obs   =        415
+                                                  Wald chi2(2)    =      65.55
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.1834
+                                                  Root MSE        =     8.1997
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |      0.095      0.126     0.75   0.452       -0.152       0.342
+     tipuach |     -0.299      0.042    -7.18   0.000       -0.381      -0.218
+       _cons |     69.573      4.263    16.32   0.000       61.217      77.928
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach fsc
+
+Linear regression                               Number of obs     =        415
+                                                F(2, 194)         =     101.23
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.4278
+                                                Root MSE          =     5.4852
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.625      0.048    12.90   0.000        0.530       0.721
+     tipuach |     -0.068      0.029    -2.35   0.020       -0.126      -0.011
+       _cons |     11.816      1.627     7.26   0.000        8.607      15.025
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,   194) =  166.42
+            Prob > F =    0.0000
+Table V column 12: avgmath, specification 6
+
+Instrumental variables (2SLS) regression          Number of obs   =        415
+                                                  Wald chi2(3)    =      68.34
+                                                  Prob > chi2     =     0.0000
+                                                  R-squared       =     0.1836
+                                                  Root MSE        =     8.1989
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+     avgmath |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+    classize |      0.023      0.158     0.15   0.882       -0.286       0.333
+     tipuach |     -0.290      0.042    -6.83   0.000       -0.373      -0.207
+      c_size |      0.023      0.024     0.94   0.346       -0.025       0.071
+       _cons |     69.866      4.330    16.14   0.000       61.379      78.352
+------------------------------------------------------------------------------
+Instrumented:  classize
+Instruments:   tipuach c_size fsc
+
+Linear regression                               Number of obs     =        415
+                                                F(3, 194)         =      91.39
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.4750
+                                                Root MSE          =     5.2606
+
+                             (Std. Err. adjusted for 195 clusters in schlcode)
+------------------------------------------------------------------------------
+             |               Robust
+    classize |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         fsc |      0.503      0.061     8.22   0.000        0.382       0.623
+     tipuach |     -0.029      0.027    -1.07   0.287       -0.082       0.024
+      c_size |      0.063      0.016     3.99   0.000        0.032       0.094
+       _cons |     10.306      1.402     7.35   0.000        7.542      13.070
+------------------------------------------------------------------------------
+
+ ( 1)  fsc = 0
+
+       F(  1,   194) =   67.57
+            Prob > F =    0.0000
+
+. postclose `results'
+
+. estimates table `models', b(%9.4f) se(%9.4f) stats(N rmse)
+
+--------------------------------------------------------------------------
+    Variable |   T5_1        T5_2        T5_3        T5_4        T5_5     
+-------------+------------------------------------------------------------
+    classize |   -0.1100     -0.1329     -0.0739     -0.1472     -0.0980  
+             |    0.0404      0.0608      0.0683      0.0887      0.0948  
+     tipuach |   -0.3462     -0.3449     -0.3464                 -0.3545  
+             |    0.0159      0.0159      0.0159                  0.0358  
+      c_size |                0.0046     -0.0396                          
+             |                0.0079      0.0218                          
+     c_size2 |                            0.0210                          
+             |                            0.0095                          
+       trend |                                        0.1001              
+             |                                        0.0260              
+       _cons |   80.6094     80.9225     81.0364     71.3930     80.0786  
+             |    1.3021      1.4932      1.4749      1.7164      3.0847  
+-------------+------------------------------------------------------------
+           N |      2049        2049        2049        2001         415  
+        rmse |    6.6493      6.6560      6.6267      8.0108      6.6178  
+--------------------------------------------------------------------------
+                                                              legend: b/se
+
+
+--------------------------------------------------------------------------
+    Variable |   T5_6        T5_7        T5_8        T5_9        T5_10    
+-------------+------------------------------------------------------------
+    classize |   -0.1501      0.0487     -0.0497     -0.0328     -0.0982  
+             |    0.1313      0.0520      0.0747      0.0845      0.0990  
+     tipuach |   -0.3475     -0.2895     -0.2840     -0.2844              
+             |    0.0375      0.0176      0.0175      0.0174              
+      c_size |    0.0168                  0.0198      0.0072              
+             |    0.0218                  0.0093      0.0274              
+     c_size2 |                                        0.0060              
+             |                                        0.0124              
+       trend |                                                    0.1301  
+             |                                                    0.0290  
+       _cons |   80.2929     71.3935     72.7426     72.7752     64.6241  
+             |    3.1820      1.6894      1.9035      1.8941      1.8938  
+-------------+------------------------------------------------------------
+           N |       415        2049        2049        2049        2001  
+        rmse |    6.6580      7.8189      7.8127      7.8089      8.6426  
+--------------------------------------------------------------------------
+                                                              legend: b/se
+
+
+--------------------------------------
+    Variable |   T5_11       T5_12    
+-------------+------------------------
+    classize |    0.0948      0.0235  
+             |    0.1260      0.1581  
+     tipuach |   -0.2995     -0.2899  
+             |    0.0417      0.0425  
+      c_size |                0.0230  
+             |                0.0244  
+     c_size2 |                        
+             |                        
+       trend |                        
+             |                        
+       _cons |   69.5726     69.8656  
+             |    4.2630      4.3300  
+-------------+------------------------
+           N |       415         415  
+        rmse |    8.1997      8.1989  
+--------------------------------------
+                          legend: b/se
+
+. export_table_results "`records'" "$root/output/tables5_6/table5.csv"
+(note: j = 1 2 3 4 5 6 7 8 9 10 11 12)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                      192   ->      16
+Number of variables                   4   ->      14
+j variable (12 values)           column   ->   (dropped)
+xij variables:
+                                  value   ->   value1 value2 ... value12
+-----------------------------------------------------------------------------
+file C:/Users/tyan0083/Documents/Codex-Restored-Projects/final project/A_existi
+> ng_work/output/tables5_6/table5.csv saved
+
+. export_latex_results "`records'" "$root/output/tables5_6/table5.tex"
+(note: j = 1 2 3 4 5 6 7 8 9 10 11 12)
+
+Data                               long   ->   wide
+-----------------------------------------------------------------------------
+Number of obs.                      192   ->      16
+Number of variables                   4   ->      14
+j variable (12 values)           column   ->   (dropped)
+xij variables:
+                                  value   ->   value1 value2 ... value12
+-----------------------------------------------------------------------------
+(note: file C:/Users/tyan0083/Documents/Codex-Restored-Projects/final project/A
+> _existing_work/output/tables5_6/table5.tex not found)
+
+. log close
+      name:  <unnamed>
+       log:  C:/Users/tyan0083/Documents/Codex-Restored-Projects/final project/
+> A_existing_work/output/tables5_6/table5.log
+  log type:  text
+ closed on:  28 Sep 2026, 20:40:05
+-------------------------------------------------------------------------------
