@@ -28,244 +28,175 @@ foreach g in 4 5 {
 capture mkdir "$root/output"
 
 
-******************************************************************************
-* SECTION 1: DATA CLEANING
-******************************************************************************
-
 /*=========================================================================*/
 *---Data Cleaning---*
-* Cleans the data for both grades and saves output/al_clean.dta, which every
-* later section reads. Log: output/1_clean.log.
-* Includes what all tables and figures share:
-*    s.1  stack final4 and final5 into one file, one row per class
-*    s.2  fix two coding errors in the grade 5 scores (dictionary)
-*    s.3  apply the paper's sample rule and drop no-score classes (Angrist, fn 11, p 542)
-*    s.3  new: sch_first, tags one class per school so schools can be counted
-*    s.4  new: fsc, Maimonides' rule class size, the instrument (Angrist, eq 1, p 540)
-*    s.5  new: seg1-seg3 disc5 disc3, the +/-5 and +/-3 samples (Angrist, pp 540, 557-559)
-* Anything one table or figure alone needs is built in that section.
+* Cleans both grades and saves output/al_clean.dta, the one file every table and figure reads.
+* Log: output/1_clean.log
 *
-* Sources cited in comments:
-*    Angrist = Angrist & Lavy (1999), item then page
-*    dictionary = data/data_dictionary.xlsx, sheet row
-*    README = the paper folder's README.txt, data notes
-* Anything not lifted from the paper or a course file is marked OUR CHANGE.
+* What happens here, by section
+*    1  stack the grade 4 and grade 5 files, one row per class
+*    2  fix two coding errors in the grade 5 scores
+*    3  apply the paper's sample rule, drop classes with no scores, tag one class per school
+*    4  build fsc, the class size Maimonides' rule predicts, our instrument
+*    5  mark the +/-5 and +/-3 discontinuity samples
+* Anything only one table or figure needs is built in that file instead.
 /*=========================================================================*/
 
-
-*                    
-clear
-capture log close                       // closes a log if crash run left open
-log using "$root/output/1_clean.log", replace text   
+* setup
+*
+clear all
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
+log using "$root/output/1_clean.log", replace text
 
 /*=========================================================================*/
 *---1. Load and stack the two grade files---*
-* Paper repeats every table for grades 5 and 4 (Angrist, Section I, p 538; Table II, p 551)
-* We create one combined file and a loop over grade for tables/figures 
+* Each row is one class, the same unit Angrist and Lavy use. Stacking both grades into one
+* file lets every table and figure loop over grade instead of repeating the code.
 /*=========================================================================*/
 
-*append data (not merge)
+* append, not merge, because the grades are different classes with the same variables
 use "$root/data/final4.dta", clear
-append using "$root/data/final5.dta"    // adds the grade 5 rows (README, W1 lab section 15)
-describe                                // log check: 4,088 obs (raw classes), 58 var. 
-tab grade                               // 2,059 grade 4, 2,029 grade 5, matches observations (dictionary row 23)
-isid grade schlcode classid             // unique key, would stop if any class appears twice (dictionary row 24)
+append using "$root/data/final5.dta"    // adds the grade 5 classes underneath
+describe
+tab grade
+isid grade schlcode classid             // grade, school and class identify each row, stops if any class appears twice
 
-* check sample is Jewish public schools only
-tab c_leom, missing                     // all 1, Jewish public schools only, matches paper (p. 538)
-tab c_pik, missing                      // 1 secular, 2 religious only: matches paper, nothing to drop (p. 538)
+* the paper only covers Jewish public schools, secular and religious, so check nothing else is here
+tab c_leom c_pik, missing
 
 
 /*=========================================================================*/
 *---2. Fix coding errors in the grade 5 scores---*
-* Two data errors flagged in the dictionary (final5 sheet):
-*   - one class has its reading and math averages recorded as score + 100 (rows 30, 33)
-*   - one class has mathsize = 0, so nobody sat the math test, yet avgmath = 0 (row 29)
+* The data dictionary flags two errors in the grade 5 file. One class has its reading and
+* math averages recorded as score + 100, and one class had nobody sit the math test but
+* shows a math average of 0. Scores run from 1 to 100, so both are recording errors, and
+* left in they would distort the score means in Table I and every regression on scores.
 /*=========================================================================*/
 
-*--- errors
-list grade schlcode classid avgverb avgmath mathsize verbsize if avgverb > 100 & !missing(avgverb)   // the +100 class
-list grade schlcode classid avgverb avgmath mathsize verbsize if mathsize == 0                        // the untested class
+*--- look at the two flagged classes before changing anything
+list grade schlcode classid avgverb avgmath mathsize verbsize if (avgverb > 100 & !missing(avgverb)) | mathsize == 0
 
 
-* fix scores: subtract the extra 100
-replace avgverb = avgverb - 100 if avgverb > 100 & !missing(avgverb)    
-replace avgmath = avgmath - 100 if avgmath > 100 & !missing(avgmath)    
+* take off the extra 100, !missing() matters because Stata treats missing as bigger than any number
+replace avgverb = avgverb - 100 if avgverb > 100 & !missing(avgverb)
+replace avgmath = avgmath - 100 if avgmath > 100 & !missing(avgmath)
 
-* mathsize 0 means no math test sat, so the 0 is not a score: set to missing
-count if mathsize == 0                          
-replace avgmath = . if mathsize == 0            // sets to missing
+* nobody sat the math test in this class, so its 0 is not a real score, set it to missing
+replace avgmath = . if mathsize == 0
 
 
 /*=========================================================================*/
-*---3. Sample restrictions (Angrist, fn 11, p 542) and a school tag---*
-* Paper keeps classes under 45 pupils and schools with at least 5 enrolled (Angrist, fn 11, p 542)
+*---3. Sample restrictions and a school tag---*
+* Angrist and Lavy keep classes with fewer than 45 pupils, in schools with at least 5 pupils
+* enrolled in the grade (their footnote 11). Every table uses this sample, so it has to match.
 *
-* This stated threshold (c_size >= 5) doesn't match their applied threshold (c_size > 5, AngristLavy_Table2.do line 32),
-* which drops the one school at exactly 5. We follow their method, so we drop
-* classize >= 45 and c_size <= 5: 2,019 classes and 1,002 schools (Angrist, Table I, p 539)
+* The footnote says at least 5, but the authors' own code drops schools with exactly 5.
+* Only one school sits at 5, well below the next smallest at 8, so we follow their code.
+* That gives the 2,019 grade 5 classes in 1,002 schools reported in their Table I.
 *
-* Classes with no score in either subject are dropped, 4 grade 4 and 5 grade 5,
-* same ones the paper could not impute (Angrist, Data Appendix, p 571)
-*
-* sch_first tags one class per school-grade so schools can be counted (Angrist, Table I, p 539)
+* Classes with no score in either subject are dropped too, 4 in grade 4 and 5 in grade 5.
+* These are the classes the paper says it could not fill in from school averages.
 /*=========================================================================*/
 
-*--- fn 11 as written (keep c_size >= 5) vs the authors' code (c_size > 5, AngristLavy_Table2.do line 32)
-*--- their stated threshold doesnt match method, we follow their method to define our threshold.
-*--- only 1 school at 5, isolated from rest of sample, reasonable to follow their applied threshold
-
-count if grade == 5 & classize < 45 & c_size >= 5 & !(missing(avgverb) & missing(avgmath))   // 2020, fn 11 as written
-count if grade == 5 & classize < 45 & c_size >  5 & !(missing(avgverb) & missing(avgmath))   // 2019, matches paper sample size
+*--- the footnote's rule against the authors' code, on grade 5
+count if grade == 5 & classize < 45 & c_size >= 5 & !(missing(avgverb) & missing(avgmath))   // footnote 11 as written
+count if grade == 5 & classize < 45 & c_size >  5 & !(missing(avgverb) & missing(avgmath))   // the authors' code
 
 
-tab c_size if c_size <= 15              // only 1 school at 5, next lowest is 3 schools at 8
-summarize c_size, detail                // school at 5 well below the rest: next 8, 1st percentile 14 
+summarize c_size, detail                // the smallest enrollments show how far the school at 5 sits from the rest
 
 
-*--- we follow their method
-tab grade if classize >= 45             // 6 grade 4, 4 grade 5
-tab grade if c_size <= 5                // 1 grade 5, the school at exactly 5
-drop if classize >= 45 | c_size <= 5    // drops classes on both threshold bounds 
+*--- apply the rule, looking at what goes first
+tab grade if classize >= 45
+tab grade if c_size <= 5                // the one school at exactly 5
+drop if classize >= 45 | c_size <= 5
 
 
-*--- Drop classes with no scores, as in the paper (Angrist, Data Appendix, p 571)
-tab grade if missing(avgverb) & missing(avgmath)   // total: 9, 4 in grade 4 and 5 in grade 5, matches paper
+*--- drop classes with no score in either subject
+tab grade if missing(avgverb) & missing(avgmath)
 drop if missing(avgverb) & missing(avgmath)
 
 
 
-*--- NEW VARIABLE sch_first: one class per school gets a 1, so summing it counts schools as Table I does (Angrist, Table I, p 539)
-bysort grade schlcode: gen sch_first = (_n == 1)   // _n = row number within school, 1 for the first class
-label variable sch_first "1 for one class per school-grade"   
+*--- sch_first marks one class in each school, so summing it counts schools the way Table I does
+bysort grade schlcode: gen sch_first = (_n == 1)   // _n is the row number within each school, so only the first class gets a 1
+label variable sch_first "1 for one class per school-grade"
 
-*--- verification  vs Angrist, Table I, p 539 and Table II p 551 (math N)
-tab grade                               // classes: 2,049 grade 4, 2,019 grade 5, matches paper
-tab grade if sch_first == 1             // schools: 1,013 grade 4, 1,002 grade 5, matches paper
-count if grade == 5 & !missing(avgverb) // classes with a reading score: 2,019, matches paper (Angrist, Table II, p 551)
-count if grade == 5 & !missing(avgmath) // classes with a math score: 2,018, matches paper; one below reading, the untested class from section 2
+*--- classes and schools per grade after the drops
+tab grade sch_first                     // row totals are classes, the sch_first = 1 column is schools
+summarize avgverb avgmath if grade == 5 // Obs counts classes with each score, math is one short because of the untested class
 
 
 /*=========================================================================*/
-*---4. Maimonides' rule class size, fsc (Angrist, eq 1, p 540)---*
-
-* New variable: fsc = es / [int((es - 1)/40) + 1]: class size predicted by the rule from September enrollment es.
-*              - Reduced form in Table III, instrument for actual class size in Tables IV and V        
+*---4. Maimonides' rule class size, fsc---*
+* fsc is the class size the rule predicts from enrollment, es / (int((es - 1)/40) + 1),
+* which is Angrist and Lavy's equation 1. It is our instrument for actual class size.
+* It drops sharply when enrollment passes 40, 80 and 120, for reasons that have nothing to
+* do with the pupils, and that jump is the variation the whole paper relies on.
 *
-* Following Angrist (p 550)
-*   - es is c_size, September enrollment, not the spring count cohsize (dictionary rows 3, 28)
-*   - September is set before parents can react to class sizes, so it cannot carry their choices (Angrist, p 550)
+* We use September enrollment (c_size), not the spring count (cohsize). September is fixed
+* before parents or schools can react to class sizes, so it can't reflect their choices.
 /*=========================================================================*/
 
 *--- new variable fsc
-gen fsc = c_size / (floor((c_size - 1)/40) + 1)   // floor() is the paper's int() 
-* floor() is more flexible and is courses rounding function (rounds down +'s and -'s). 
-* int() truncates toward zero; floor() rounds down.
-* They give the same result here because (c_size - 1)/40 is nonnegative. 
-* same result here as no negative class sizes (obviously), floor() matches the paper's definition (Angrist, p 540)
+gen fsc = c_size / (floor((c_size - 1)/40) + 1)   // floor() does the paper's int(), rounding down
+* Stata's int() cuts toward zero, floor() always rounds down, which is how the paper defines it.
+* With enrollment never negative (obviously) the two give the same answer here.
 
-label variable fsc "predicted class size, Maimonides' rule (eq 1)"  
-summarize fsc classize c_size cohsize   // fsc 8 to 40 by construction; class size 30.1 and enrollment 78.0 
-                                        //  - sit between the grade means in Angrist, Table I 
+label variable fsc "predicted class size, Maimonides' rule (eq 1)"
+summarize fsc classize c_size cohsize
 
 
 
 /*=========================================================================*/
-*---5. Discontinuity samples and segment dummies (Angrist, pp 540, 557-559)---*
-* Why: class size jumps at enrollment 40, 80, 120, where one more pupil splits the grade. Schools just
-* either side of a cutoff have similar enrollment but very different fsc, so which side a school lands on
-* is as good as random (Angrist, p 565; Week 4 lecture, slide 1).
-*   - Tables III to VI rerun the models on these samples
-*   - there is a cost in precision, 471 classes instead of 2,019 in grade 5 (Angrist, Table I, p 539)
+*---Table I: Unweighted descriptive statistics---*
+* Writes output/table1.tex. Panel A is the full sample (mean, s.d. and quantiles), panel B
+* is the +/-5 discontinuity sample (mean and s.d.). Grades 5 and 4 only, since the grade 3
+* data isn't provided. Log: output/2_table1.log
 *
-* New variables
-*   - seg1 seg2 seg3 = 1 if enrollment in [36,45], [76,85], [116,125] (Angrist, p 540)
-*       - one dummy per cutoff, 40, 80, 120
-*   - disc5 = 1 if in any segment, the +/-5 sample (Angrist, p 540, p 557)
-*       - keeps only near-cutoff schools for Table I panel B, Table III panel B, Tables IV to VI
-*   - disc3 = 1 if enrollment in [38,43], [78,83], [118,123], the +/-3 sample (Angrist, p 559)
-*       - same, tighter band, for the +/-3 columns of Table VI
-*   - seg1 seg2 double as Table VI's segment dummies (Angrist, p 559)
-*       - control for which cutoff a school is at, seg3 omitted
+* Reads output/al_clean.dta. The sample, the school tag sch_first and the +/-5 marker disc5
+* all come from 1_clean.do, nothing new is built here.
 *
-* Following the text, not the table header
-*   - Table I panel B header says 116-124, the text says [116,125] (Angrist, p 540, p 557)
-*   - 125 gives the paper's own 471 and 415 classes, so the header is a typo
-*
-* sch_first still counts schools inside these samples
-*   - c_size is the same for every class in a school (dictionary row 3), so a school is wholly in or out
+* Unweighted like Angrist and Lavy's Table I, so each class counts once. Grade 5 comes first
+* and the rows follow the paper's order, so the .tex reads like their table.
 /*=========================================================================*/
 
-*--- +/-5 sample, one dummy per cutoff then their union
-gen seg1 = inrange(c_size, 36, 45)      // cutoff 40 (Angrist, p 540)
-gen seg2 = inrange(c_size, 76, 85)      // cutoff 80
-gen seg3 = inrange(c_size, 116, 125)    // cutoff 120, 125 as in the text (Angrist, p 540, p 557)
-gen disc5 = (seg1 | seg2 | seg3)        // 1 if near any cutoff
-label variable disc5 "+/-5 discontinuity sample"   
-
-*--- +/-3 sample, no segment dummies: Table VI reuses seg1 seg2
-gen disc3 = inrange(c_size, 38, 43) | inrange(c_size, 78, 83) | inrange(c_size, 118, 123)   // (Angrist, p 559)
-label variable disc3 "+/-3 discontinuity sample"
-
-*--- verification vs Angrist, Table I panel B p 539, Table VI p 558
-tab grade disc5                         // 415 grade 4, 471 grade 5, matches paper 
-tab grade disc3                         // 265 grade 4, 302 grade 5, matches paper
-tab grade if disc5 == 1 & sch_first == 1   // schools: 195 grade 4, 224 grade 5, matches paper
-
-
-/*=========================================================================*/
-*--- Close, Save the analysis file, and verify clean---*
-* One file every table and figure reads, saved to output/ so data/ stays untouched (STATA_RULES slide 5)
-/*=========================================================================*/
-isid grade schlcode classid             // cleared: key still unique after the drops (safeguard, errors and stops if not)
-describe                                // cleared: as expected, 4,068 obs and 65 variables: 58 raw + 7 new
-save "$root/output/al_clean.dta", replace   // save fixed data
-log close                               // close log
-
-
-******************************************************************************
-* SECTION 2: TABLE I
-******************************************************************************
-
-/*=========================================================================*/
-*---Table I: Unweighted descriptive statistics (Angrist, Table I, p 539)---*
-* Writes output/table1.tex: panel A full sample (mean, s.d., quantiles), panel B +/-5
-* discontinuity sample (mean, s.d.). Grades 5 and 4 only, the grade 3 file is not
-* provided (what_to_replicate). Log: output/2_table1.log
+* setup
 *
-* Reads output/al_clean.dta from SECTION 1. The sample, the school tag sch_first and the
-* +/-5 sample disc5 are decided there (SECTION 1, s.3 and s.5), nothing new is built here
-*
-* Unweighted, as Table I is. The per-pupil version is Appendix 1 (p 572), not required.
-* Grade 5 first and the rows in the table's order, so the .tex reads like the paper (p 539)
-*
-* Sources cited in comments (same key as SECTION 1):
-*    Angrist = Angrist & Lavy (1999), item then page
-*    dictionary = data/data_dictionary.xlsx, sheet row
-*    README = the paper folder's README.txt, data notes
-*    what_to_replicate = the task list on Moodle
-* Anything not lifted from the paper or a course file is marked OUR CHANGE.
-/*=========================================================================*/
+clear all
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
 
-*
-clear
-capture log close                       // closes a log if crash run left open
+*--- needs output/al_clean.dta, built by 1_clean.do if it's missing so this file can run alone
+capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists
+if _rc do "$root/code/1_clean.do"                  // only runs the cleaning file if the .dta isn't there
 
-* Cleaned data were created in SECTION 1 above.
-confirm file "$root/output/al_clean.dta"
-
-log using "$root/output/2_table1.log", replace text   // root is set at the top of this merged file
+log using "$root/output/2_table1.log", replace text
 use "$root/output/al_clean.dta", clear
 
 
 /*=========================================================================*/
-*---1. Rows of the table and their labels (Angrist, Table I, p 539)---*
-* The seven rows in the paper's order. Reading size and math size are test takers per
-* class, the two score rows are class averages (Table I variable definitions, p 539)
+*---1. Rows of the table and their labels---*
+* The seven Table I variables in the paper's order, listed once so both panels and both
+* grades are built from the same list. Reading size and math size are the number of test
+* takers per class, and the two score rows are class averages.
 /*=========================================================================*/
 
-local vars classize c_size tipuach verbsize mathsize avgverb avgmath   // dictionary rows 25, 3, 52, 32, 29, 33, 30
-local lab_classize "Class size"         // row labels as printed (p 539), nested macro `lab_`v'' below is OUR CHANGE
+local vars classize c_size tipuach verbsize mathsize avgverb avgmath
+local lab_classize "Class size"         // row labels as printed in the paper, looked up below as `lab_`v''
 local lab_c_size   "Enrollment"
 local lab_tipuach  "Percent disadvantaged"
 local lab_verbsize "Reading size"
@@ -275,205 +206,199 @@ local lab_avgmath  "Average math"
 
 
 /*=========================================================================*/
-*---2. Write the table, panel A then panel B (Angrist, Table I, p 539)---*
-* One LaTeX file written line by line, because the quantile columns do not fit an esttab
-* layout . Numbers to one decimal as printed
+*---2. Write the table, panel A then panel B---*
+* Table I shows who is in the data, and that the +/-5 sample looks much like the full sample.
+* That similarity is what makes it reasonable to compare schools near the cutoffs later on.
 *
-* Classes and schools per grade go in the panel header as in the paper. sch_first counts
-* schools (SECTION 1, s.3). Panel B keeps disc5 == 1 (SECTION 1, s.5)
+* Written line by line with file write, because the quantile columns don't fit an esttab
+* layout. Numbers to one decimal as printed, with the class and school counts in each panel
+* header as in the paper.
 /*=========================================================================*/
 
-file open t1 using "$root/output/table1.tex", write replace   
+file open t1 using "$root/output/table1.tex", write replace
 file write t1 "\begin{tabular}{lccccccc}" _n
 file write t1 "\toprule" _n
 file write t1 " & & & \multicolumn{5}{c}{Quantiles} \\" _n
-file write t1 "Variable & Mean & S.D. & 0.10 & 0.25 & 0.50 & 0.75 & 0.90 \\" _n   // column heads as in Table I (p 539)
+file write t1 "Variable & Mean & S.D. & 0.10 & 0.25 & 0.50 & 0.75 & 0.90 \\" _n   // same column heads as the paper
 file write t1 "\midrule" _n
 
-*--- panel A: full sample, mean, s.d. and quantiles
+*--- panel A, full sample, mean, s.d. and quantiles
 file write t1 "\multicolumn{8}{l}{A. Full sample} \\" _n
-foreach g in 5 4 {                                   // grade 5 first, as in the paper 
-    count if grade == `g'
-    local ncl = r(N)                                 // classes
-    count if grade == `g' & sch_first == 1
-    local nsch = r(N)                                // schools, one class per school tagged (SECTION 1, s.3)
-    display _n "Panel A, grade `g': `ncl' classes, `nsch' schools"   // 2,019 and 1,002 grade 5, 2,049 and 1,013 grade 4, matches paper (p 539)
+foreach g in 5 4 {                                   // grade 5 first, as in the paper
+    quietly summarize sch_first if grade == `g'
+    local ncl  = r(N)                                // classes
+    local nsch = r(sum)                              // schools, since sch_first is 1 for one class in each school
+    display _n "Panel A, grade `g': `ncl' classes, `nsch' schools"
     file write t1 "\multicolumn{8}{l}{`g'th grade (`ncl' classes, `nsch' schools, tested in 1991)} \\" _n
     foreach v in `vars' {
-        quietly summarize `v' if grade == `g', detail   // detail gives the quantiles, missing avgmath skipped
-        local m   : display %6.1f r(mean)            // one decimal as printed 
-        local sd  : display %6.1f r(sd)
-        local p10 : display %6.1f r(p10)             // r(p10) to r(p90) from summarize, detail
-        local p25 : display %6.1f r(p25)
-        local p50 : display %6.1f r(p50)
-        local p75 : display %6.1f r(p75)
-        local p90 : display %6.1f r(p90)
-        display "`lab_`v'': mean `m'  sd `sd'  p10 `p10'  p25 `p25'  p50 `p50'  p75 `p75'  p90 `p90'"   // grade 5 class size 29.9 (6.5) with quantiles 21 26 31 35 38, enrollment 77.7, average verbal 74.4, average math 67.3, then grade 4 30.3 (6.3), 78.3, 72.5, 68.9, matches paper (p 539)
-        file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & `=trim("`p10'")' & `=trim("`p25'")' & `=trim("`p50'")' & `=trim("`p75'")' & `=trim("`p90'")' \\" _n   // trim() drops the padding of %6.1f 
+        quietly summarize `v' if grade == `g', detail   // detail adds the quantiles, the missing math score is skipped
+        foreach s in mean sd p10 p25 p50 p75 p90 {   // each statistic summarize leaves in r()
+            local `s' = string(r(`s'), "%6.1f")      // one decimal, as printed
+        }
+        display "`lab_`v'': mean `mean'  sd `sd'  p10 `p10'  p25 `p25'  p50 `p50'  p75 `p75'  p90 `p90'"
+        file write t1 "`lab_`v'' & `mean' & `sd' & `p10' & `p25' & `p50' & `p75' & `p90' \\" _n
+    }
 }
-}
-*--- panel B: +/-5 discontinuity sample, mean and s.d. only, as printed (p 539)
+
+*--- panel B, +/-5 discontinuity sample, mean and s.d. only, as in the paper
 file write t1 "\midrule" _n
-file write t1 "\multicolumn{8}{l}{B. +/-5 discontinuity sample (enrollment 36--45, 76--85, 116--125)} \\" _n   // 125 not the header's 124 (SECTION 1, s.5)
+file write t1 "\multicolumn{8}{l}{B. +/-5 discontinuity sample (enrollment 36--45, 76--85, 116--125)} \\" _n   // 125, not the 124 in the paper's header (see 1_clean.do)
 foreach g in 5 4 {
-    count if grade == `g' & disc5 == 1
-    local ncl = r(N)
-    count if grade == `g' & disc5 == 1 & sch_first == 1
-    local nsch = r(N)
-    display _n "Panel B, grade `g': `ncl' classes, `nsch' schools"   // 471 and 224 grade 5, 415 and 195 grade 4, matches paper (p 539)
+    quietly summarize sch_first if grade == `g' & disc5 == 1
+    local ncl  = r(N)
+    local nsch = r(sum)
+    display _n "Panel B, grade `g': `ncl' classes, `nsch' schools"
     file write t1 "\multicolumn{8}{l}{`g'th grade (`ncl' classes, `nsch' schools)} \\" _n
     foreach v in `vars' {
         quietly summarize `v' if grade == `g' & disc5 == 1
-        local m  : display %6.1f r(mean)
-        local sd : display %6.1f r(sd)
-        display "`lab_`v'': mean `m'  sd `sd'"       // grade 5 class size 30.8 (7.4), enrollment 76.4, average verbal 74.5, average math 67.0, then grade 4 31.1 (7.2), 78.5, 72.5, 68.7, matches paper (p 539)
-        file write t1 "`lab_`v'' & `=trim("`m'")' & `=trim("`sd'")' & & & & & \\" _n
+        local mean = string(r(mean), "%6.1f")
+        local sd   = string(r(sd), "%6.1f")
+        display "`lab_`v'': mean `mean'  sd `sd'"
+        file write t1 "`lab_`v'' & `mean' & `sd' & & & & & \\" _n
     }
 }
 
 file write t1 "\bottomrule" _n
 file write t1 "\end{tabular}" _n
-file close t1                                      
+file close t1
 
 
 /*=========================================================================*/
 *---Close---*
 /*=========================================================================*/
-log close                               // close log
-
-
-******************************************************************************
-* SECTION 3: FIGURE I
-******************************************************************************
+log close
 
 /*=========================================================================*/
-*---Figure I: Class size by enrollment count, actual and Maimonides' rule (Angrist, Figure I, p 541)---*
-* Writes output/figure1_grade5.png (panel a) and output/figure1_grade4.png (panel b).
-* Log: output/3_figure1.log
+*---Figure I: Class size by enrollment, actual and Maimonides' rule---*
+* Writes output/figure1_grade5.png and output/figure1_grade4.png. Log: output/3_figure1.log
 *
-* Reads output/al_clean.dta from SECTION 1. The sample is decided there (s.3) and
-* fsc is built there (section 4), nothing new is built here
+* Reads output/al_clean.dta. The sample and fsc both come from 1_clean.do, nothing new is
+* built here.
 *
-* Each panel plots the average actual class size at each enrollment count, solid, against
-* the class size the rule predicts, fsc, dashed (Figure I caption, p 541). The paper also
-* draws horizontal lines at the corners of fsc (p 541), we leave those out
-*
-* Sources cited in comments (same key as SECTION 1):
-*    Angrist = Angrist & Lavy (1999), item then page
-*    dictionary = data/data_dictionary.xlsx, sheet row
-*    README = the paper folder's README.txt, data notes
-* Anything not lifted from the paper or a course file is marked OUR CHANGE.
+* Each panel plots the average actual class size at each enrollment count (solid) against the
+* class size the rule predicts (dashed), as in Angrist and Lavy's Figure I. The paper also
+* draws horizontal lines at the corners of the rule, we leave those out.
 /*=========================================================================*/
 
+* setup
 *
-clear
-capture log close                       // closes a log if crash run left open
+clear all
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
 
-* Cleaned data were created in SECTION 1 above.
-confirm file "$root/output/al_clean.dta"
+*--- needs output/al_clean.dta, built by 1_clean.do if it's missing so this file can run alone
+capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists
+if _rc do "$root/code/1_clean.do"                  // only runs the cleaning file if the .dta isn't there
 
-log using "$root/output/3_figure1.log", replace text   // root is set at the top of this merged file
+log using "$root/output/3_figure1.log", replace text
 use "$root/output/al_clean.dta", clear
 
 
 /*=========================================================================*/
-*---1. One panel per grade (Angrist, Figure I, p 541)---*
-* Collapse to one row per enrollment count inside preserve/restore, so the full file is
-* back for the next grade. fsc is the same for every class with that
-* enrollment (Angrist, eq 1, p 540), so its mean is fsc itself
+*---1. One panel per grade---*
+* Shows the rule really drives class size. Actual class size follows fsc and drops sharply
+* just past 40, 80 and 120, so fsc moves class size, which the instrument needs to work.
+*
+* Collapse to one row per enrollment count inside preserve/restore, so the full data is back
+* for the next grade. fsc is the same for every class with a given enrollment, so its mean
+* is just fsc.
 /*=========================================================================*/
 
-foreach g in 5 4 {                                  // panel a grade 5, panel b grade 4, the paper's order (p 541)
-    preserve                                       
-    keep if grade == `g'                            
-    collapse (mean) classize fsc, by(c_size)        // mean actual class size at each enrollment count (p 541)
-    summarize classize fsc c_size                   // fsc max 40 by construction (eq 1, p 540), mean actual size tops out at 40.0 grade 5 and 40.3 grade 4, a few classes exceed 40 (p 542)
-    twoway (line fsc c_size, lpattern(dash)) ///    // rule dashed, as the paper's legend (p 541)
-           (line classize c_size), ///              // actual solid
-        legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///   
-        title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///   // axis titles as printed (p 541)
-        xlabel(0(20)220) ylabel(5(5)40)             // the paper's axes (p 541), the numlist form is OUR CHANGE
-    graph export "$root/output/figure1_grade`g'.png", replace   
-    restore                                         // back to the full two-grade file for the next panel
+foreach g in 5 4 {                                  // grade 5 then grade 4, the paper's order
+    preserve
+    keep if grade == `g'
+    collapse (mean) classize fsc, by(c_size)        // average class size at each enrollment count
+    summarize classize fsc c_size
+    twoway (line fsc c_size, lpattern(dash)) ///    // the rule dashed, as in the paper
+           (line classize c_size), ///              // actual class size solid
+        legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///
+        title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///   // axis titles as in the paper
+        xlabel(0(20)220) ylabel(5(5)40)             // same axes as the paper
+    graph export "$root/output/figure1_grade`g'.png", replace
+    restore                                         // back to the full two-grade data for the next panel
 }
 
 
 /*=========================================================================*/
 *---Close---*
 /*=========================================================================*/
-log close                               // close log
-
-
-******************************************************************************
-* SECTION 4: FIGURE II
-******************************************************************************
+log close
 
 /*=========================================================================*/
-*---Figure II: Average reading scores and predicted class size by enrollment (Angrist, Figure II, p 543)---*
-* Writes output/figure2_grade5.png (panel a) and output/figure2_grade4.png (panel b).
-* Log: output/4_figure2.log
+*---Figure II: Average reading scores and predicted class size by enrollment---*
+* Writes output/figure2_grade5.png and output/figure2_grade4.png. Log: output/4_figure2.log
 *
-* Reads output/al_clean.dta from SECTION 1 (sample s.3, fsc s.4). Builds e_bin,
-* the enrollment interval midpoint, used only here
+* Reads output/al_clean.dta, with the sample and fsc from 1_clean.do. Builds e_bin, the
+* midpoint of each ten-pupil enrollment interval, used only here.
 *
-* Each panel plots the average reading score and the average fsc by enrollment, in intervals
-* of ten plotted at their midpoints, scores on the left axis and fsc on the right (p 543 and
-* fn 12, p 544). Math is Figure III, optional (what_to_replicate), not produced
+* Each panel plots average reading score and average fsc by enrollment in intervals of ten,
+* scores on the left axis and fsc on the right, as in Angrist and Lavy's Figure II.
+* Math is their Figure III, which is optional, so it isn't produced.
 *
-* Enrollment range. The paper averages schools with enrollment 9 to 190 and pools 160 to 190
-* into the last point at 165 (fn 12, p 544). We keep enrollment up to 169, so every point is one
-* interval of ten and the axis still runs 5 to 165 (OUR CHANGE). Only the first and last
-* points differ from the paper's rule, the first keeps enrollment 5 to 8, the last stops at 169
-*
-* Sources cited in comments (same key as SECTION 1):
-*    Angrist = Angrist & Lavy (1999), item then page
-*    dictionary = data/data_dictionary.xlsx, sheet row
-*    README = the paper folder's README.txt, data notes
-*    what_to_replicate = the task list on Moodle
-* Anything not lifted from the paper or a course file is marked OUR CHANGE.
+* The paper averages enrollments 9 to 190 and lumps 160 to 190 into its last point at 165.
+* We stop at 169 instead, so every point is one interval of ten and the axis still runs
+* 5 to 165. Only the first and last points differ, the first keeps enrollments 5 to 8 and
+* the last stops at 169.
 /*=========================================================================*/
 
+* setup
 *
-clear
-capture log close                       // closes a log if crash run left open
+clear all
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
 
-* Cleaned data were created in SECTION 1 above.
-confirm file "$root/output/al_clean.dta"
+*--- needs output/al_clean.dta, built by 1_clean.do if it's missing so this file can run alone
+capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists
+if _rc do "$root/code/1_clean.do"                  // only runs the cleaning file if the .dta isn't there
 
-log using "$root/output/4_figure2.log", replace text   // root is set at the top of this merged file
+log using "$root/output/4_figure2.log", replace text
 use "$root/output/al_clean.dta", clear
 
 
 /*=========================================================================*/
-*---1. One panel per grade (Angrist, Figure II, p 543)---*
-* Keep one grade and enrollment up to 169 (see header), bin enrollment into intervals of ten,
-* collapse to one row per interval, plot, then restore the full file for the next grade
+*---1. One panel per grade---*
+* Reading scores move up and down as a mirror image of fsc. Other effects of enrollment
+* should be smooth, so this zigzag is the class size effect showing up before any regression.
+*
+* Keep one grade and enrollment up to 169, bin enrollment into tens, collapse to one row
+* per bin, plot, then restore the full data for the next grade.
 /*=========================================================================*/
 
-tab grade if c_size > 169                           // 53 grade 5, 40 grade 4 left out of the figure, the paper pools 160 to 190 into its last point (fn 12, p 544)
+tab grade if c_size > 169                           // classes left out of the figure, the paper lumps 160 to 190 into its last point
 
-foreach g in 5 4 {                                  // panel a grade 5, panel b grade 4 (p 543)
-    preserve                                      
-    keep if grade == `g' & c_size <= 169            // intervals up to [160,169], see header 
-    gen e_bin = 10 * floor(c_size / 10) + 5         // interval midpoint 5, 15, ..., 165 (fn 12, p 544)
-    collapse (mean) avgverb fsc (count) n=avgverb, by(e_bin)   // averages by interval and the classes in each (p 543)
-    list e_bin n avgverb fsc                        // 17 rows, 5 to 165, first interval 4 classes grade 5 and 3 grade 4, kept so the axis matches the paper's (p 543)
-    twoway (connected avgverb e_bin) ///            // scores, left axis 
-           (connected fsc e_bin, yaxis(2) lpattern(dash)), ///   // fsc dashed on the right axis, as the paper (p 543)
-        legend(label(1 "Average reading score") label(2 "Predicted class size (right axis)")) ///   
-        title("Grade `g'") xtitle("Enrollment count") ///  
-        ytitle("Average reading score") ytitle("Predicted class size", axis(2)) ///  
-        xlabel(5(20)165)                            // midpoints 5 to 165 as the paper's axis (fn 12, p 544), the numlist form is OUR CHANGE
-    graph export "$root/output/figure2_grade`g'.png", replace   
-    restore                                        
+foreach g in 5 4 {                                  // grade 5 then grade 4, as in the paper
+    preserve
+    keep if grade == `g' & c_size <= 169            // intervals up to 160-169, see the header
+    gen e_bin = 10 * floor(c_size / 10) + 5         // midpoint of each ten-pupil interval, 5, 15, ..., 165
+    collapse (mean) avgverb fsc (count) n=avgverb, by(e_bin)   // averages per interval and how many classes are in each
+    list e_bin n avgverb fsc                        // the plotted points, the small first interval is kept so the axis matches the paper
+    twoway (connected avgverb e_bin) ///            // scores on the left axis
+           (connected fsc e_bin, yaxis(2) lpattern(dash)), ///   // fsc dashed on the right axis, as in the paper
+        legend(label(1 "Average reading score") label(2 "Predicted class size (right axis)")) ///
+        title("Grade `g'") xtitle("Enrollment count") ///
+        ytitle("Average reading score") ytitle("Predicted class size", axis(2)) ///
+        xlabel(5(20)165)                            // same axis as the paper
+    graph export "$root/output/figure2_grade`g'.png", replace
+    restore
 }
 
 
 /*=========================================================================*/
 *---Close---*
 /*=========================================================================*/
-log close                               // close log
-
+log close
 
 ******************************************************************************
 * SECTION 5: TABLES II-V AND THREE STANDARD ERRORS

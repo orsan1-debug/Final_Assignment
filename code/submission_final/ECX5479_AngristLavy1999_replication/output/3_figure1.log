@@ -1,0 +1,65 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\otisr\Documents\ECX5479\Final_Assignment\submission_final\ECX5479_AngristLavy1999_replication/output/3_figure1.log
+  log type:  text
+ opened on:  12 Oct 2026, 16:41:10
+
+. use "$root/output/al_clean.dta", clear
+
+. 
+. 
+. /*=========================================================================*/
+. *---1. One panel per grade---*
+. * Shows the rule really drives class size. Actual class size follows fsc and drops sharply
+. * just past 40, 80 and 120, so fsc moves class size, which the instrument needs to work.
+. *
+. * Collapse to one row per enrollment count inside preserve/restore, so the full data is back
+. * for the next grade. fsc is the same for every class with a given enrollment, so its mean
+. * is just fsc.
+. /*=========================================================================*/
+. 
+. foreach g in 5 4 {                                  // grade 5 then grade 4, the paper's order
+  2.     preserve
+  3.     keep if grade == `g'
+  4.     collapse (mean) classize fsc, by(c_size)        // average class size at each enrollment count
+  5.     summarize classize fsc c_size
+  6.     twoway (line fsc c_size, lpattern(dash)) ///    // the rule dashed, as in the paper
+>            (line classize c_size), ///              // actual class size solid
+>         legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///
+>         title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///   // axis titles as in the paper
+>         xlabel(0(20)220) ylabel(5(5)40)             // same axes as the paper
+  7.     graph export "$root/output/figure1_grade`g'.png", replace
+  8.     restore                                         // back to the full two-grade data for the next panel
+  9. }
+(2,049 observations deleted)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    classize |        153    30.15331    6.551193          8         40
+         fsc |        153    31.00599    7.145539          8         40
+      c_size |        153    87.63399    50.48433          8        226
+(file C:\Users\otisr\Documents\ECX5479\Final_Assignment\submission_final\ECX5479_AngristLavy1999_replication/output/figure1_grade5.png not found)
+file C:\Users\otisr\Documents\ECX5479\Final_Assignment\submission_final\ECX5479_AngristLavy1999_replication/output/figure1_grade5.png saved as PNG
+    format
+(2,019 observations deleted)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    classize |        150    30.37073    6.380766          8   40.33333
+         fsc |        150    31.01667    6.948234          8         40
+      c_size |        150       85.96    48.18503          8        225
+(file C:\Users\otisr\Documents\ECX5479\Final_Assignment\submission_final\ECX5479_AngristLavy1999_replication/output/figure1_grade4.png not found)
+file C:\Users\otisr\Documents\ECX5479\Final_Assignment\submission_final\ECX5479_AngristLavy1999_replication/output/figure1_grade4.png saved as PNG
+    format
+
+. 
+. 
+. /*=========================================================================*/
+. *---Close---*
+. /*=========================================================================*/
+. log close
+      name:  <unnamed>
+       log:  C:\Users\otisr\Documents\ECX5479\Final_Assignment\submission_final\ECX5479_AngristLavy1999_replication/output/3_figure1.log
+  log type:  text
+ closed on:  12 Oct 2026, 16:41:11
+----------------------------------------------------------------------------------------------------------------------------------------------------
