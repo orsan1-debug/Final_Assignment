@@ -15,24 +15,27 @@
 *    Angrist = Angrist & Lavy (1999), item then page
 *    dictionary = data/data_dictionary.xlsx, sheet row
 *    README = the paper folder's README.txt, data notes
-*    code = W1 to W5 lab solution do-files (W1 by section, W2 to W5 by question)
-*    STATA_RULES = Week 1 "Project and Code Management" slides
 *    what_to_replicate = the task list on Moodle
-* Anything not lifted from a course file is marked OUR CHANGE.
+* Steps and choices that are our own, not the paper's, are marked OUR CHANGE.
 /*=========================================================================*/
 
-* setup. Course code: W1/W3 lab
+* setup
 *
 clear all
 set more off                            // lets file run w/o manual input when output is long
-if "$root" == "" global root "C:/Users/otisr/Documents/ECX5479/Final_Assignment"   // fallback when run alone, 0_master.do sets it for the full run (OUR CHANGE)
+if "$root" == "" {                      // run alone: find the project folder as 0_master.do does (OUR CHANGE)
+    capture confirm file "../code/0_master.do"    // Stata starts in code/ when a do-file is opened by double-click
+    if !_rc cd ..                                 // up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" unless the working directory is the project folder
+    global root "`c(pwd)'"
+}
 capture log close                       // closes a log if crash run left open
 
 *--- dependency: needs output/al_clean.dta from 1_clean.do, built here if missing so this file runs alone (OUR CHANGE)
-capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists (code: capture prefix W3 lab bonus, W4 lab section 0)
-if _rc do "$root/code/1_clean.do"                  // runs the cleaning file only when the .dta is not there, before this log opens (code: if _rc W4 lab section 0)
+capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists
+if _rc do "$root/code/1_clean.do"                  // runs the cleaning file only when the .dta is not there, before this log opens
 
-log using "$root/output/6_table3.log", replace text   // $root set once in 0_master.do, edit the path there
+log using "$root/output/6_table3.log", replace text   // $root set once in 0_master.do
 use "$root/output/al_clean.dta", clear
 
 
@@ -42,8 +45,8 @@ use "$root/output/al_clean.dta", clear
 * disc5 as the second marker (1_clean.do section 5). Spec locals give the two columns
 /*=========================================================================*/
 
-gen full = 1                            // full-sample marker, looping over sample names is OUR CHANGE (code: W1 lab section 8 generate)
-local spec1 fsc tipuach                 // column (1), fsc and PD (p 553; code: W1 lab section 11 locals)
+gen full = 1                            // full-sample marker, looping over sample names is OUR CHANGE
+local spec1 fsc tipuach                 // column (1), fsc and PD (p 553)
 local spec2 fsc tipuach c_size          // column (2) adds September enrollment (dictionary row 3)
 
 
@@ -53,13 +56,13 @@ local spec2 fsc tipuach c_size          // column (2) adds September enrollment 
 * without a math score, so math N is 2,018 (p 553; 1_clean.do section 2)
 /*=========================================================================*/
 
-foreach smp in full disc5 {                         // panel A then panel B (code: W1 lab section 13 foreach)
+foreach smp in full disc5 {                         // panel A then panel B
     foreach g in 5 4 {                              // grade 5 first, as in the paper
         summarize classize avgverb avgmath if grade == `g' & `smp' == 1   // means rows, 29.9 74.4 67.3 and 30.3 72.5 68.9 full sample, 30.8 74.5 67.0 and 31.1 72.5 68.7 +/-5 sample, matches paper (p 553)
         foreach y in classize avgverb avgmath {     // class size, reading, math
-            forvalues s = 1/2 {                     // (code: W1 lab section 13 forvalues)
-                reg `y' `spec`s'' if grade == `g' & `smp' == 1, vce(cluster schlcode)   // clustered by school, nested `spec`s'' is OUR CHANGE (code: W5 lab Q2 vce(cluster))
-                estimates store t3_`smp'_g`g'_`y'_s`s'   // one name per panel and column (code: W5 lab Q2)
+            forvalues s = 1/2 {
+                reg `y' `spec`s'' if grade == `g' & `smp' == 1, vce(cluster schlcode)   // clustered by school, nested `spec`s'' is OUR CHANGE
+                estimates store t3_`smp'_g`g'_`y'_s`s'   // one name per panel and column
             }
         }
     }
@@ -70,20 +73,20 @@ foreach smp in full disc5 {                         // panel A then panel B (cod
 *---3. Export, one table per panel, and checks (Angrist, Table III, p 553)---*
 /*=========================================================================*/
 
-foreach smp in full disc5 {                         // (code: W1 lab section 13 foreach)
-    esttab t3_`smp'_g5_classize_s1 t3_`smp'_g5_classize_s2 ///   // columns in the paper's order (p 553; code: W2 lab Q12 esttab using)
+foreach smp in full disc5 {
+    esttab t3_`smp'_g5_classize_s1 t3_`smp'_g5_classize_s2 ///   // columns in the paper's order (p 553)
            t3_`smp'_g5_avgverb_s1  t3_`smp'_g5_avgverb_s2  ///
            t3_`smp'_g5_avgmath_s1  t3_`smp'_g5_avgmath_s2  ///
            t3_`smp'_g4_classize_s1 t3_`smp'_g4_classize_s2 ///
            t3_`smp'_g4_avgverb_s1  t3_`smp'_g4_avgverb_s2  ///
            t3_`smp'_g4_avgmath_s1  t3_`smp'_g4_avgmath_s2  ///
         using "$root/output/table3_`smp'.tex", replace booktabs ///   // one file per panel
-        b(%7.3f) se(%7.3f) keep(fsc tipuach c_size) ///   // three decimals as printed (code: W2 lab Q12 b() se(), W4 lab Q1 keep())
-        coeflabels(fsc "fsc" tipuach "Percent disadvantaged" c_size "Enrollment") ///   // row names as printed (code: W3 lab Q6 coeflabels)
-        stats(rmse r2 N, fmt(2 3 0) labels("Root MSE" "R-squared" "N")) ///   // the table's bottom rows (p 553; code: W3 lab Q6 stats labels), rmse as an esttab stat is OUR CHANGE
-        mtitles("Class size" "Class size" "Reading" "Reading" "Math" "Math" ///   // (code: W3 lab Q6 mtitles)
+        b(%7.3f) se(%7.3f) keep(fsc tipuach c_size) ///   // three decimals as printed
+        coeflabels(fsc "fsc" tipuach "Percent disadvantaged" c_size "Enrollment") ///   // row names as printed
+        stats(rmse r2 N, fmt(2 3 0) labels("Root MSE" "R-squared" "N")) ///   // the table's bottom rows (p 553), rmse as an esttab stat is OUR CHANGE
+        mtitles("Class size" "Class size" "Reading" "Reading" "Math" "Math" ///
                 "Class size" "Class size" "Reading" "Reading" "Math" "Math") ///
-        addnotes("Columns 1-6 grade 5, columns 7-12 grade 4. Standard errors clustered by school." ///   // (code: W4 lab Q1 addnotes)
+        addnotes("Columns 1-6 grade 5, columns 7-12 grade 4. Standard errors clustered by school." ///
                  "fsc = enrollment / [int((enrollment - 1)/40) + 1].")   // the table's own note (p 553)
 }
 

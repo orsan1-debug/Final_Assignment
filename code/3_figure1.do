@@ -1,62 +1,61 @@
 /*=========================================================================*/
-*---Figure I: Class size by enrollment count, actual and Maimonides' rule (Angrist, Figure I, p 541)---*
-* Writes output/figure1_grade5.png (panel a) and output/figure1_grade4.png (panel b).
-* Log: output/3_figure1.log
+*---Figure I: Class size by enrollment, actual and Maimonides' rule---*
+* Writes output/figure1_grade5.png and output/figure1_grade4.png. Log: output/3_figure1.log
 *
-* Reads output/al_clean.dta from 1_clean.do. The sample is decided there (section 3) and
-* fsc is built there (section 4), nothing new is built here
+* Reads output/al_clean.dta. The sample and fsc both come from 1_clean.do, nothing new is
+* built here.
 *
-* Each panel plots the average actual class size at each enrollment count, solid, against
-* the class size the rule predicts, fsc, dashed (Figure I caption, p 541). The paper also
-* draws horizontal lines at the corners of fsc (p 541), we leave those out
-*
-* Sources cited in comments (same key as 1_clean.do):
-*    Angrist = Angrist & Lavy (1999), item then page
-*    dictionary = data/data_dictionary.xlsx, sheet row
-*    README = the paper folder's README.txt, data notes
-*    code = W1 to W5 lab solution do-files (W1 by section, W2 to W5 by question)
-*    STATA_RULES = Week 1 "Project and Code Management" slides
-* Anything not lifted from a course file is marked OUR CHANGE.
+* Each panel plots the average actual class size at each enrollment count (solid) against the
+* class size the rule predicts (dashed), as in Angrist and Lavy's Figure I. The paper also
+* draws horizontal lines at the corners of the rule, we leave those out.
 /*=========================================================================*/
 
-* setup. Course code: W1/W3 lab
+* setup
 *
 clear all
-set more off                            // lets file run w/o manual input when output is long
-if "$root" == "" global root "C:/Users/otisr/Documents/ECX5479/Final_Assignment"   // fallback when run alone, 0_master.do sets it for the full run (OUR CHANGE)
-capture log close                       // closes a log if crash run left open
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
 
-*--- dependency: needs output/al_clean.dta from 1_clean.do, built here if missing so this file runs alone (OUR CHANGE)
-capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists (code: capture prefix W3 lab bonus, W4 lab section 0)
-if _rc do "$root/code/1_clean.do"                  // runs the cleaning file only when the .dta is not there, before this log opens (code: if _rc W4 lab section 0)
+*--- needs output/al_clean.dta, built by 1_clean.do if it's missing so this file can run alone
+capture confirm file "$root/output/al_clean.dta"   // _rc is 0 if the file exists
+if _rc do "$root/code/1_clean.do"                  // only runs the cleaning file if the .dta isn't there
 
-log using "$root/output/3_figure1.log", replace text   // $root set once in 0_master.do, edit the path there
+log using "$root/output/3_figure1.log", replace text
 use "$root/output/al_clean.dta", clear
 
 
 /*=========================================================================*/
-*---1. One panel per grade (Angrist, Figure I, p 541)---*
-* Collapse to one row per enrollment count inside preserve/restore, so the full file is
-* back for the next grade (code: W4 lab Q4c). fsc is the same for every class with that
-* enrollment (Angrist, eq 1, p 540), so its mean is fsc itself
+*---1. One panel per grade---*
+* Shows the rule really drives class size. Actual class size follows fsc and drops sharply
+* just past 40, 80 and 120, so fsc moves class size, which the instrument needs to work.
+*
+* Collapse to one row per enrollment count inside preserve/restore, so the full data is back
+* for the next grade. fsc is the same for every class with a given enrollment, so its mean
+* is just fsc.
 /*=========================================================================*/
 
-foreach g in 5 4 {                                  // panel a grade 5, panel b grade 4, the paper's order (p 541; code: W1 lab section 13 foreach)
-    preserve                                        // (code: W4 lab Q4c)
-    keep if grade == `g'                            // (code: W1 lab section 5 keep if)
-    collapse (mean) classize fsc, by(c_size)        // mean actual class size at each enrollment count (p 541; code: W3 lab Q3 collapse mean by)
-    summarize classize fsc c_size                   // fsc max 40 by construction (eq 1, p 540), mean actual size tops out at 40.0 grade 5 and 40.3 grade 4, a few classes exceed 40 (p 542)
-    twoway (line fsc c_size, lpattern(dash)) ///    // rule dashed, as the paper's legend (p 541; code: W3 lab Q4 twoway line, W4 lab Q4a lpattern(dash))
-           (line classize c_size), ///              // actual solid
-        legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///   // (code: W1 lab section 10)
-        title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///   // axis titles as printed (p 541; code: W4 lab Q4a)
-        xlabel(0(20)220) ylabel(5(5)40)             // the paper's axes (p 541), the numlist form is OUR CHANGE
-    graph export "$root/output/figure1_grade`g'.png", replace   // (code: W1 lab section 10)
-    restore                                         // back to the full two-grade file for the next panel (code: W4 lab Q4c)
+foreach g in 5 4 {                                  // grade 5 then grade 4, the paper's order
+    preserve
+    keep if grade == `g'
+    collapse (mean) classize fsc, by(c_size)        // average class size at each enrollment count
+    summarize classize fsc c_size
+    twoway (line fsc c_size, lpattern(dash)) ///    // the rule dashed, as in the paper
+           (line classize c_size), ///              // actual class size solid
+        legend(label(1 "Maimonides' rule") label(2 "Actual class size")) ///
+        title("Grade `g'") xtitle("Enrollment count") ytitle("Class size") ///   // axis titles as in the paper
+        xlabel(0(20)220) ylabel(5(5)40)             // same axes as the paper
+    graph export "$root/output/figure1_grade`g'.png", replace
+    restore                                         // back to the full two-grade data for the next panel
 }
 
 
 /*=========================================================================*/
 *---Close---*
 /*=========================================================================*/
-log close                               // close log
+log close

@@ -1,0 +1,177 @@
+/*=========================================================================*/
+*---Figure and table check---*
+* Writes figure_check/figure_check.html, which puts each figure and table we make next to
+* the same exhibit from Angrist and Lavy, with a line saying whether this run produced it.
+* Open it in any browser. Log: figure_check/figure_check.log
+*
+* Run it from 0_master.do. The master deletes last run's figures and tables first, so an
+* exhibit only shows as produced if this run made it. The paper's exhibits are scans in
+* figure_check/paper/. It is a check for us, it doesn't change any result.
+/*=========================================================================*/
+
+* setup
+*
+clear all
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
+log using "$root/figure_check/figure_check.log", replace text
+
+
+/*=========================================================================*/
+*---1. The exhibits and what to look for in each---*
+* One entry per output file. Each note says what should match the paper and where we
+* know ours differs, so a quick look tells you whether it came out right.
+/*=========================================================================*/
+
+*--- figures
+local figs figure1_grade5 figure1_grade4 figure2_grade5 figure2_grade4
+
+local title_figure1_grade5 "Figure I, grade 5"
+local title_figure1_grade4 "Figure I, grade 4"
+local title_figure2_grade5 "Figure II, grade 5"
+local title_figure2_grade4 "Figure II, grade 4"
+
+local look_figure1_grade5 "Actual class size should follow the dashed rule and drop sharply just past 40, 80 and 120, by less than the rule says. Ours starts at enrollment 8, not 5, because we drop the one school at 5, and we leave out the paper's horizontal lines."
+local look_figure1_grade4 "Same pattern as grade 5. Actual class size tracks the dashed rule and drops just past 40, 80 and 120. We leave out the paper's horizontal lines."
+local look_figure2_grade5 "Scores should rise with enrollment overall and dip where predicted class size peaks, roughly a mirror image of the dashed line. The end points can differ, our first point keeps enrollments 5 to 9 and our last stops at 169, where the paper starts at 9 and pools 160 to 190."
+local look_figure2_grade4 "Same reading as grade 5, scores dip where predicted class size peaks. The end points can differ for the same reason as grade 5."
+
+*--- tables, each with the paper table it matches
+local tabs table1 table2 table2_se table3_full table3_disc5 table4 table5 table6
+
+local paper_table1       table1
+local paper_table2       table2
+local paper_table2_se    table2
+local paper_table3_full  table3
+local paper_table3_disc5 table3
+local paper_table4       table4
+local paper_table5       table5
+local paper_table6       table6
+
+local title_table1       "Table I, descriptive statistics"
+local title_table2       "Table II, OLS"
+local title_table2_se    "Table II, column (2), three standard errors (the required addition)"
+local title_table3_full  "Table III, reduced forms, full sample (the paper's panel A)"
+local title_table3_disc5 "Table III, reduced forms, +/-5 sample (the paper's panel B)"
+local title_table4       "Table IV, 2SLS, grade 5"
+local title_table5       "Table V, 2SLS, grade 4"
+local title_table6       "Table VI, dummy instruments, +/-5 and +/-3 samples"
+
+local look_table1       "Means, s.d. and quantiles by grade, with the class and school counts in each panel header. There is no grade 3 panel because the grade 3 data isn't provided."
+local look_table2       "Class size is positive alone and close to zero once percent disadvantaged is added. Our standard errors are clustered by school while the paper's are corrected for within-school correlation, so they differ a little."
+local look_table2_se    "The paper has no table like this. It is the required comparison of three standard errors for column (2), shown against the paper's Table II."
+local look_table3_full  "In the class size columns fsc is the first stage, large and positive. In the score columns fsc is the reduced form, mostly negative."
+local look_table3_disc5 "The same models on the +/-5 sample, with far fewer classes, so the standard errors are bigger."
+local look_table4       "Class size should be negative in the reading columns and in most math columns. Columns 5 and 6 and 11 and 12 use the +/-5 sample."
+local look_table5       "Same layout as Table IV for grade 4. The effects are smaller than in grade 5."
+local look_table6       "Each block is the +/-5 sample with percent disadvantaged, then the +/-3 sample with and without it, as in the paper."
+
+
+/*=========================================================================*/
+*---2. Which exhibits did this run produce---*
+* confirm file sets _rc to 0 when the file is there.
+/*=========================================================================*/
+
+local nfig = 0
+foreach f in `figs' {
+    capture confirm file "$root/output/`f'.png"
+    local made_`f' = (_rc == 0)                     // 1 if the figure is there
+    local nfig = `nfig' + `made_`f''
+}
+local ntab = 0
+foreach t in `tabs' {
+    capture confirm file "$root/output/`t'.tex"
+    local made_`t' = (_rc == 0)                     // 1 if the table is there
+    local ntab = `ntab' + `made_`t''
+}
+local nfigs : word count `figs'
+local ntabs : word count `tabs'
+
+
+/*=========================================================================*/
+*---3. Write the page---*
+* Plain HTML written line by line with file write. Figures sit side by side with the
+* paper's. Tables are .tex files, which a browser can't show, so each one is read in as
+* text, stripped of its LaTeX commands, and written out as an HTML table above the scan
+* of the paper's table.
+/*=========================================================================*/
+
+file open chk using "$root/figure_check/figure_check.html", write replace
+file write chk "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Figure and table check</title>" _n
+file write chk "<style>body{font-family:Arial,sans-serif;margin:24px;max-width:1400px}" _n
+file write chk ".row{display:flex;gap:16px}.row div{flex:1}img{max-width:100%;border:1px solid #ccc}" _n
+file write chk ".ok{color:#1a7f37;font-weight:bold}.miss{color:#c62828;font-weight:bold}.note{color:#444}h2{margin-top:36px}" _n
+file write chk ".wrap{overflow-x:auto;border:1px solid #ccc;padding:8px;margin-bottom:12px}" _n
+file write chk "table.tex{border-collapse:collapse;font-size:13px}table.tex td{padding:2px 8px;text-align:right;white-space:nowrap}" _n
+file write chk "table.tex td:first-child{text-align:left}tr.rule td{border-top:1px solid #000;padding:0;height:2px}</style></head><body>" _n
+file write chk "<h1>Figure and table check</h1>" _n
+file write chk "<p>Run on `c(current_date)' at `c(current_time)'. <b>`nfig' of `nfigs'</b> figures and <b>`ntab' of `ntabs'</b> tables produced in this run.</p>" _n
+
+*--- figures, ours on the left, the paper's on the right
+foreach f in `figs' {
+    file write chk "<h2>`title_`f''</h2>" _n
+    if `made_`f'' file write chk "<p class='ok'>PASS, output/`f'.png was produced</p>" _n
+    else file write chk "<p class='miss'>MISSING, output/`f'.png was not produced</p>" _n
+    file write chk "<div class='row'><div><b>Ours</b><br><img src='../output/`f'.png'></div>" _n
+    file write chk "<div><b>Angrist and Lavy</b><br><img src='paper/`f'.png'></div></div>" _n
+    file write chk "<p class='note'>`look_`f''</p>" _n
+}
+
+*--- tables, ours on top, the paper's underneath
+foreach t in `tabs' {
+    file write chk "<h2>`title_`t''</h2>" _n
+    if `made_`t'' {
+        file write chk "<p class='ok'>PASS, output/`t'.tex was produced</p>" _n
+
+        * read the .tex in, one line per row of data
+        quietly infix str2045 line 1-2045 using "$root/output/`t'.tex", clear
+        quietly {
+            replace line = strtrim(line)
+            gen byte rule = inlist(line, char(92) + "toprule", char(92) + "midrule", char(92) + "bottomrule")
+            * drop the LaTeX-only lines (begin, end, def, addlinespace, lone braces), keep table rows
+            drop if line == "" | line == "{" | line == "}"
+            drop if substr(line, 1, 1) == char(92) & !rule & strpos(line, "multicolumn") == 0
+            * strip the LaTeX commands and keep the text, char(92) is a backslash
+            replace line = ustrregexra(line, "multicolumn\{[0-9]+\}\{[lcr]\}", "")
+            replace line = subinstr(line, "sym", "", .)
+            replace line = subinstr(line, "footnotesize", "", .)
+            replace line = subinstr(line, char(92), "", .)
+            replace line = subinstr(line, "{", "", .)
+            replace line = subinstr(line, "}", "", .)
+            * make the text safe for HTML, then turn each & into a new cell
+            replace line = subinstr(line, "&", "|c|", .)
+            replace line = subinstr(line, "<", "&lt;", .)
+            replace line = subinstr(line, ">", "&gt;", .)
+            replace line = subinstr(line, "|c|", "</td><td>", .)
+            replace line = "<tr><td>" + line + "</td></tr>" if !rule
+            replace line = "<tr class='rule'><td colspan='13'></td></tr>" if rule
+        }
+        file write chk "<b>Ours</b><div class='wrap'><table class='tex'>" _n
+        forvalues i = 1/`=_N' {
+            file write chk (line[`i']) _n
+        }
+        file write chk "</table></div>" _n
+    }
+    else file write chk "<p class='miss'>MISSING, output/`t'.tex was not produced</p>" _n
+    file write chk "<b>Angrist and Lavy</b><br><img src='paper/`paper_`t''.png'>" _n
+    file write chk "<p class='note'>`look_`t''</p>" _n
+}
+
+file write chk "</body></html>" _n
+file close chk
+
+*--- the same result in the log
+display _n "Check, `nfig' of `nfigs' figures and `ntab' of `ntabs' tables produced, see figure_check/figure_check.html"
+if `nfig' < `nfigs' | `ntab' < `ntabs' display as error "At least one exhibit is missing, check figure_check/figure_check.html and the logs"
+
+
+/*=========================================================================*/
+*---Close---*
+/*=========================================================================*/
+log close

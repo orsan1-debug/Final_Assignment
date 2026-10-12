@@ -1,191 +1,170 @@
 /*=========================================================================*/
 *---Data Cleaning---*
-* Cleans the data for both grades and saves output/al_clean.dta, which every
-* table and figure file reads. Log: output/1_clean.log.
-* Includes what all tables and figures share:
-*    s.1  stack final4 and final5 into one file, one row per class
-*    s.2  fix two coding errors in the grade 5 scores (dictionary)
-*    s.3  apply the paper's sample rule and drop no-score classes (Angrist, fn 11, p 542)
-*    s.3  new: sch_first, tags one class per school so schools can be counted
-*    s.4  new: fsc, Maimonides' rule class size, the instrument (Angrist, eq 1, p 540)
-*    s.5  new: seg1-seg3 disc5 disc3, the +/-5 and +/-3 samples (Angrist, pp 540, 557-559)
-* Anything one table or figure alone needs is built in that file.
+* Cleans both grades and saves output/al_clean.dta, the one file every table and figure reads.
+* Log: output/1_clean.log
 *
-* Sources cited in comments:
-*    Angrist = Angrist & Lavy (1999), item then page
-*    dictionary = data/data_dictionary.xlsx, sheet row
-*    README = the paper folder's README.txt, data notes
-*    code = W1 to W5 lab solution do-files (W1 by section, W2 to W5 by question)
-*    STATA_RULES = Week 1 "Project and Code Management" slides
-* Anything not lifted from a course file is marked OUR CHANGE.
+* What happens here, by section
+*    1  stack the grade 4 and grade 5 files, one row per class
+*    2  fix two coding errors in the grade 5 scores
+*    3  apply the paper's sample rule, drop classes with no scores, tag one class per school
+*    4  build fsc, the class size Maimonides' rule predicts, our instrument
+*    5  mark the +/-5 and +/-3 discontinuity samples
+* Anything only one table or figure needs is built in that file instead.
 /*=========================================================================*/
 
-* setup. Course code: W1/W3 lab
-*                    
+* setup
+*
 clear all
-set more off                            // lets file run w/o manual input when output is long
-if "$root" == "" global root "C:/Users/otisr/Documents/ECX5479/Final_Assignment"   // fallback when run alone, 0_master.do sets it for the full run (OUR CHANGE)
-capture log close                       // closes a log if crash run left open
-log using "$root/output/1_clean.log", replace text   // $root set once in 0_master.do, edit the path there
+set more off                            // so long output doesn't pause the run
+if "$root" == "" {                      // run on its own, find the project folder the same way 0_master.do does
+    capture confirm file "../code/0_master.do"    // double-clicking a do file opens Stata inside code/
+    if !_rc cd ..                                 // move up to the project folder
+    confirm file "code/0_master.do"               // stops with "file not found" if we are not in the project folder
+    global root "`c(pwd)'"
+}
+capture log close                       // closes any log left open by a crashed run
+log using "$root/output/1_clean.log", replace text
 
 /*=========================================================================*/
 *---1. Load and stack the two grade files---*
-* Paper repeats every table for grades 5 and 4 (Angrist, Section I, p 538; Table II, p 551)
-* We create one combined file and a loop over grade for tables/figures (STATA_RULES slide 6)
+* Each row is one class, the same unit Angrist and Lavy use. Stacking both grades into one
+* file lets every table and figure loop over grade instead of repeating the code.
 /*=========================================================================*/
 
-*append data (not merge)
+* append, not merge, because the grades are different classes with the same variables
 use "$root/data/final4.dta", clear
-append using "$root/data/final5.dta"    // adds the grade 5 rows (README, W1 lab section 15)
-describe                                // log check: 4,088 obs (raw classes), 58 var. 
-tab grade                               // 2,059 grade 4, 2,029 grade 5, matches observations (dictionary row 23)
-isid grade schlcode classid             // unique key, would stop if any class appears twice (dictionary row 24; W3 lab Q5)
+append using "$root/data/final5.dta"    // adds the grade 5 classes underneath
+describe
+tab grade
+isid grade schlcode classid             // grade, school and class identify each row, stops if any class appears twice
 
-* check sample is Jewish public schools only
-tab c_leom, missing                     // all 1, Jewish public schools only, matches paper (p. 538)
-tab c_pik, missing                      // 1 secular, 2 religious only: matches paper, nothing to drop (p. 538)
+* the paper only covers Jewish public schools, secular and religious, so check nothing else is here
+tab c_leom c_pik, missing
 
 
 /*=========================================================================*/
 *---2. Fix coding errors in the grade 5 scores---*
-* Two data errors flagged in the dictionary (final5 sheet):
-*   - one class has its reading and math averages recorded as score + 100 (rows 30, 33)
-*   - one class has mathsize = 0, so nobody sat the math test, yet avgmath = 0 (row 29)
+* The data dictionary flags two errors in the grade 5 file. One class has its reading and
+* math averages recorded as score + 100, and one class had nobody sit the math test but
+* shows a math average of 0. Scores run from 1 to 100, so both are recording errors, and
+* left in they would distort the score means in Table I and every regression on scores.
 /*=========================================================================*/
 
-*--- errors
-list grade schlcode classid avgverb avgmath mathsize verbsize if avgverb > 100 & !missing(avgverb)   // the +100 class
-list grade schlcode classid avgverb avgmath mathsize verbsize if mathsize == 0                        // the untested class
+*--- look at the two flagged classes before changing anything
+list grade schlcode classid avgverb avgmath mathsize verbsize if (avgverb > 100 & !missing(avgverb)) | mathsize == 0
 
 
-* fix scores: subtract the extra 100
-replace avgverb = avgverb - 100 if avgverb > 100 & !missing(avgverb)    
-replace avgmath = avgmath - 100 if avgmath > 100 & !missing(avgmath)    // (W3 lab Q3)
+* take off the extra 100, !missing() matters because Stata treats missing as bigger than any number
+replace avgverb = avgverb - 100 if avgverb > 100 & !missing(avgverb)
+replace avgmath = avgmath - 100 if avgmath > 100 & !missing(avgmath)
 
-* mathsize 0 means no math test sat, so the 0 is not a score: set to missing
-count if mathsize == 0                          
-replace avgmath = . if mathsize == 0            // sets to missing, (W3 lab Q5)
+* nobody sat the math test in this class, so its 0 is not a real score, set it to missing
+replace avgmath = . if mathsize == 0
 
 
 /*=========================================================================*/
-*---3. Sample restrictions (Angrist, fn 11, p 542) and a school tag---*
-* Paper keeps classes under 45 pupils and schools with at least 5 enrolled (Angrist, fn 11, p 542)
+*---3. Sample restrictions and a school tag---*
+* Angrist and Lavy keep classes with fewer than 45 pupils, in schools with at least 5 pupils
+* enrolled in the grade (their footnote 11). Every table uses this sample, so it has to match.
 *
-* This stated threshold (c_size >= 5) doesn't match their applied threshold (c_size > 5, AngristLavy_Table2.do line 32),
-* which drops the one school at exactly 5. We follow their method, so we drop
-* classize >= 45 and c_size <= 5: 2,019 classes and 1,002 schools (Angrist, Table I, p 539)
+* The footnote says at least 5, but the authors' own code drops schools with exactly 5.
+* Only one school sits at 5, well below the next smallest at 8, so we follow their code.
+* That gives the 2,019 grade 5 classes in 1,002 schools reported in their Table I.
 *
-* Classes with no score in either subject are dropped, 4 grade 4 and 5 grade 5,
-* same ones the paper could not impute (Angrist, Data Appendix, p 571)
-*
-* sch_first tags one class per school-grade so schools can be counted (Angrist, Table I, p 539)
+* Classes with no score in either subject are dropped too, 4 in grade 4 and 5 in grade 5.
+* These are the classes the paper says it could not fill in from school averages.
 /*=========================================================================*/
 
-*--- fn 11 as written (keep c_size >= 5) vs the authors' code (c_size > 5, AngristLavy_Table2.do line 32)
-*--- their stated threshold doesnt match method, we follow their method to define our threshold.
-*--- only 1 school at 5, isolated from rest of sample, reasonable to follow their applied threshold
-
-count if grade == 5 & classize < 45 & c_size >= 5 & !(missing(avgverb) & missing(avgmath))   // 2020, fn 11 as written
-count if grade == 5 & classize < 45 & c_size >  5 & !(missing(avgverb) & missing(avgmath))   // 2019, matches paper sample size
+*--- the footnote's rule against the authors' code, on grade 5
+count if grade == 5 & classize < 45 & c_size >= 5 & !(missing(avgverb) & missing(avgmath))   // footnote 11 as written
+count if grade == 5 & classize < 45 & c_size >  5 & !(missing(avgverb) & missing(avgmath))   // the authors' code
 
 
-tab c_size if c_size <= 15              // only 1 school at 5, next lowest is 3 schools at 8
-summarize c_size, detail                // school at 5 well below the rest: next 8, 1st percentile 14 (W1 lab section 1)
+summarize c_size, detail                // the smallest enrollments show how far the school at 5 sits from the rest
 
 
-*--- we follow their method
-tab grade if classize >= 45             // 6 grade 4, 4 grade 5 (W1 lab section 8)
-tab grade if c_size <= 5                // 1 grade 5, the school at exactly 5
-drop if classize >= 45 | c_size <= 5    // drops classes on both threshold bounds (W3 lab Q5)
+*--- apply the rule, looking at what goes first
+tab grade if classize >= 45
+tab grade if c_size <= 5                // the one school at exactly 5
+drop if classize >= 45 | c_size <= 5
 
 
-*--- Drop classes with no scores, as in the paper (Angrist, Data Appendix, p 571)
-tab grade if missing(avgverb) & missing(avgmath)   // total: 9, 4 in grade 4 and 5 in grade 5, matches paper
+*--- drop classes with no score in either subject
+tab grade if missing(avgverb) & missing(avgmath)
 drop if missing(avgverb) & missing(avgmath)
 
 
 
-*--- NEW VARIABLE sch_first: one class per school gets a 1, so summing it counts schools as Table I does (Angrist, Table I, p 539)
-bysort grade schlcode: gen sch_first = (_n == 1)   // _n = row number within school, 1 for the first class (code: W1 lab section 7 + W4 lab Q4)
-label variable sch_first "1 for one class per school-grade"   // (W4 lab section 0)
+*--- sch_first marks one class in each school, so summing it counts schools the way Table I does
+bysort grade schlcode: gen sch_first = (_n == 1)   // _n is the row number within each school, so only the first class gets a 1
+label variable sch_first "1 for one class per school-grade"
 
-*--- verification  vs Angrist, Table I, p 539 and Table II p 551 (math N)
-tab grade                               // classes: 2,049 grade 4, 2,019 grade 5, matches paper
-tab grade if sch_first == 1             // schools: 1,013 grade 4, 1,002 grade 5, matches paper
-count if grade == 5 & !missing(avgverb) // classes with a reading score: 2,019, matches paper (Angrist, Table II, p 551)
-count if grade == 5 & !missing(avgmath) // classes with a math score: 2,018, matches paper; one below reading, the untested class from section 2
+*--- classes and schools per grade after the drops
+tab grade sch_first                     // row totals are classes, the sch_first = 1 column is schools
+summarize avgverb avgmath if grade == 5 // Obs counts classes with each score, math is one short because of the untested class
 
 
 /*=========================================================================*/
-*---4. Maimonides' rule class size, fsc (Angrist, eq 1, p 540)---*
-
-* New variable: fsc = es / [int((es - 1)/40) + 1]: class size predicted by the rule from September enrollment es.
-*              - Used as the instrument for actual class size in Tables III to V         
+*---4. Maimonides' rule class size, fsc---*
+* fsc is the class size the rule predicts from enrollment, es / (int((es - 1)/40) + 1),
+* which is Angrist and Lavy's equation 1. It is our instrument for actual class size.
+* It drops sharply when enrollment passes 40, 80 and 120, for reasons that have nothing to
+* do with the pupils, and that jump is the variation the whole paper relies on.
 *
-* Following Angrist (p 550)
-*   - es is c_size, September enrollment, not the spring count cohsize (dictionary rows 3, 28)
-*   - September is set before parents can react to class sizes, so it cannot carry their choices (Angrist, p 550)
+* We use September enrollment (c_size), not the spring count (cohsize). September is fixed
+* before parents or schools can react to class sizes, so it can't reflect their choices.
 /*=========================================================================*/
 
 *--- new variable fsc
-gen fsc = c_size / (floor((c_size - 1)/40) + 1)   // floor() is the paper's int() (code: W1 lab section 8, W4 lab Q4c)
-* floor() is more flexible and is courses rounding function (rounds down +'s and -'s). Stata's int() only for positives. 
-* same result here as no negative class sizes (obviously), floor() matches the paper's definition (Angrist, p 540)
+gen fsc = c_size / (floor((c_size - 1)/40) + 1)   // floor() does the paper's int(), rounding down
+* Stata's int() cuts toward zero, floor() always rounds down, which is how the paper defines it.
+* With enrollment never negative (obviously) the two give the same answer here.
 
-label variable fsc "predicted class size, Maimonides' rule (eq 1)"   // (code: W4 lab section 0)
-summarize fsc classize c_size cohsize   // fsc 8 to 40 by construction; class size 30.1 and enrollment 78.0 
-                                        //  - sit between the grade means in Angrist, Table I (code: W1 lab section 1)
+label variable fsc "predicted class size, Maimonides' rule (eq 1)"
+summarize fsc classize c_size cohsize
 
 
 
 /*=========================================================================*/
-*---5. Discontinuity samples and segment dummies (Angrist, pp 540, 557-559)---*
-* Why: class size jumps at enrollment 40, 80, 120, where one more pupil splits the grade. Schools just
-* either side of a cutoff have similar enrollment but very different fsc, so which side a school lands on
-* is as good as random (Angrist, p 565; Week 4 lecture, slide 1).
-*   - Tables III to VI rerun the models on these samples
-*   - there is a cost in precision, 471 classes instead of 2,019 in grade 5 (Angrist, Table I, p 539)
+*---5. Discontinuity samples and segment dummies---*
+* Marks schools close to the cutoffs at 40, 80 and 120, where one extra pupil splits the grade
+* into another class. Schools just either side have almost the same enrollment but very
+* different predicted class sizes, so which side a school lands on is close to random.
+* Tables III to VI rerun the models on these samples, at the cost of far fewer classes.
 *
-* New variables
-*   - seg1 seg2 seg3 = 1 if enrollment in [36,45], [76,85], [116,125] (Angrist, p 540)
-*       - one dummy per cutoff, 40, 80, 120
-*   - disc5 = 1 if in any segment, the +/-5 sample (Angrist, p 540, p 557)
-*       - keeps only near-cutoff schools for Table I panel B, Table III panel B, Tables IV to VI
-*   - disc3 = 1 if enrollment in [38,43], [78,83], [118,123], the +/-3 sample (Angrist, p 559)
-*       - same, tighter band, for the +/-3 columns of Table VI
-*   - seg1 seg2 double as Table VI's segment dummies (Angrist, p 559)
-*       - control for which cutoff a school is at, seg3 omitted
+*   seg1 seg2 seg3   1 if enrollment is in [36,45], [76,85], [116,125], one per cutoff
+*   disc5            1 if in any of them, the +/-5 sample
+*   disc3            1 if in [38,43], [78,83], [118,123], the tighter +/-3 sample for Table VI
+*   seg1 and seg2 also act as Table VI's segment controls, with seg3 left out
 *
-* Following the text, not the table header
-*   - Table I panel B header says 116-124, the text says [116,125] (Angrist, p 540, p 557)
-*   - 125 gives the paper's own 471 and 415 classes, so the header is a typo
-*
-* sch_first still counts schools inside these samples
-*   - c_size is the same for every class in a school (dictionary row 3), so a school is wholly in or out
+* Angrist and Lavy's Table I header says 116-124 but their text says 116-125, and only 125
+* gives their own class counts, so we treat 124 as a typo.
+* A school's enrollment is the same for all its classes, so a whole school is in or out,
+* and sch_first still counts schools correctly inside these samples.
 /*=========================================================================*/
 
-*--- +/-5 sample, one dummy per cutoff then their union
-gen seg1 = inrange(c_size, 36, 45)      // cutoff 40 (Angrist, p 540; code: W4 lab Q10b, W1 lab section 8)
+*--- +/-5 sample, one dummy per cutoff, then any of them
+gen seg1 = inrange(c_size, 36, 45)      // cutoff 40
 gen seg2 = inrange(c_size, 76, 85)      // cutoff 80
-gen seg3 = inrange(c_size, 116, 125)    // cutoff 120, 125 as in the text (Angrist, p 540, p 557)
-gen disc5 = (seg1 | seg2 | seg3)        // 1 if near any cutoff (code: W5 lab Bonus 5)
-label variable disc5 "+/-5 discontinuity sample"   // (code: W4 lab section 0)
+gen seg3 = inrange(c_size, 116, 125)    // cutoff 120, up to 125 as in the text
+gen disc5 = (seg1 | seg2 | seg3)        // 1 if near any cutoff
+label variable disc5 "+/-5 discontinuity sample"
 
-*--- +/-3 sample, no segment dummies: Table VI reuses seg1 seg2
-gen disc3 = inrange(c_size, 38, 43) | inrange(c_size, 78, 83) | inrange(c_size, 118, 123)   // (Angrist, p 559)
+*--- +/-3 sample, Table VI reuses seg1 and seg2 for it
+gen disc3 = inrange(c_size, 38, 43) | inrange(c_size, 78, 83) | inrange(c_size, 118, 123)
 label variable disc3 "+/-3 discontinuity sample"
 
-*--- verification vs Angrist, Table I panel B p 539, Table VI p 558
-tab grade disc5                         // 415 grade 4, 471 grade 5, matches paper (code: W1 lab section 8)
-tab grade disc3                         // 265 grade 4, 302 grade 5, matches paper
-tab grade if disc5 == 1 & sch_first == 1   // schools: 195 grade 4, 224 grade 5, matches paper
+*--- classes and schools in each sample
+tab grade sch_first if disc5 == 1       // +/-5 sample, row totals are classes, the sch_first = 1 column is schools
+tab grade disc3                         // +/-3 sample, the disc3 = 1 column is classes
 
 
 /*=========================================================================*/
-*--- Close, Save the analysis file, and verify clean---*
-* One file every table and figure reads, saved to output/ so data/ stays untouched (STATA_RULES slide 5)
+*---Close and save the analysis file---*
+* Every table and figure reads this one file, so they all share the same sample,
+* and the raw files in data/ are never changed.
 /*=========================================================================*/
-isid grade schlcode classid             // cleared: key still unique after the drops (safeguard, errors and stops if not)
-describe                                // cleared: as expected, 4,068 obs and 65 variables: 58 raw + 7 new
-save "$root/output/al_clean.dta", replace   // save fixed data
-log close                               // close log
+isid grade schlcode classid             // still one row per class after the drops, stops if not
+describe
+save "$root/output/al_clean.dta", replace
+log close
